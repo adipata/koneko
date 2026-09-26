@@ -17,12 +17,22 @@ each character being written stroke by stroke.
 - **Phase 4 (done):** Practice mode: write each character with Apple Pencil, finger or mouse;
   every stroke is checked for order, direction and shape, with a demo of the right stroke
   after a mistake, an optional guide, and stars at the end.
-- Next: kanji-level display modes, history, rewards.
+- **Phase 5 (done):** writing styles (as adults write / only kanji up to her school grade,
+  with the rest in hiragana / all hiragana / all katakana), furigana toggle, "My words" history
+  with stars earned in Practice, handwriting-style font (Klee One).
 
 ## Setup
 
 Open Settings (gear icon) in the app and paste an OpenRouter API key. It is stored in the
 Keychain. The model can be changed there too (default: `google/gemini-3.7-flash`).
+
+## Data and fonts
+
+- `koneko/Resources/kanji_grades.json`: school grade of each jōyō kanji, from KANJIDIC2
+  (© EDRDG, CC BY-SA 4.0) via [kanji-data](https://github.com/davidluzgouveia/kanji-data).
+  Regenerate with `python3 Tools/build_kanji_grades.py`.
+- `koneko/Resources/Fonts/KleeOne-SemiBold.ttf`: [Klee One](https://github.com/fontworks-fonts/Klee)
+  by Fontworks, SIL Open Font License 1.1 (license text next to the font).
 
 ## Stroke data
 

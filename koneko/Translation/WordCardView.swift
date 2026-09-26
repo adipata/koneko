@@ -4,13 +4,14 @@ import SwiftUI
 struct WordCardView: View {
     let word: WordCandidate
     let showRomaji: Bool
+    var showFurigana = true
 
     var body: some View {
         VStack(spacing: 8) {
             if !word.emoji.isEmpty {
                 Text(word.emoji).font(.system(size: 56))
             }
-            FuriganaText(parts: word.parts)
+            FuriganaText(parts: word.parts, showFurigana: showFurigana)
             HStack(spacing: 16) {
                 Button("Say it", systemImage: "speaker.wave.2.fill") {
                     Pronouncer.shared.speak(word.spokenText)
@@ -43,17 +44,18 @@ struct WordCardView: View {
 /// Shows each part of a word with its reading above it when it contains kanji.
 struct FuriganaText: View {
     let parts: [WordCandidate.Part]
+    var showFurigana = true
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 2) {
             ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
                 VStack(spacing: 0) {
-                    let needsReading = JapaneseText.containsKanji(part.text) && !part.reading.isEmpty
+                    let needsReading = showFurigana && JapaneseText.containsKanji(part.text) && !part.reading.isEmpty
                     Text(needsReading ? part.reading : " ")
-                        .font(.system(size: 18))
+                        .font(.handwriting(size: 18))
                         .foregroundStyle(.orange)
                     Text(part.text)
-                        .font(.system(size: 52, weight: .medium))
+                        .font(.handwriting(size: 60))
                 }
             }
         }
@@ -80,7 +82,7 @@ struct CandidatePicker: View {
                         } label: {
                             VStack(spacing: 4) {
                                 Text(candidate.emoji.isEmpty ? "❓" : candidate.emoji).font(.largeTitle)
-                                Text(candidate.japanese).font(.title2)
+                                Text(candidate.japanese).font(.handwriting(size: 26))
                                 Text(candidate.meaning)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)

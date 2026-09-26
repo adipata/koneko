@@ -21,6 +21,9 @@ final class AppSettings {
         static let inputLanguage = "inputLanguage"
         static let showRomaji = "showRomaji"
         static let speakAutomatically = "speakAutomatically"
+        static let writingStyle = "writingStyle"
+        static let kanjiLevel = "kanjiLevel"
+        static let showFurigana = "showFurigana"
     }
 
     private let defaults = UserDefaults.standard
@@ -41,10 +44,31 @@ final class AppSettings {
         didSet { defaults.set(speakAutomatically, forKey: Keys.speakAutomatically) }
     }
 
+    var writingStyle: WritingStyle {
+        didSet { defaults.set(writingStyle.rawValue, forKey: Keys.writingStyle) }
+    }
+
+    /// 0 = no kanji yet, 1–6 = school grade, 7 = all jōyō kanji.
+    var kanjiLevel: Int {
+        didSet { defaults.set(kanjiLevel, forKey: Keys.kanjiLevel) }
+    }
+
+    var showFurigana: Bool {
+        didSet { defaults.set(showFurigana, forKey: Keys.showFurigana) }
+    }
+
+    /// The word as it should appear on screen with the current writing settings.
+    func display(_ word: WordCandidate) -> WordCandidate {
+        writingStyle.apply(to: word, kanjiLevel: kanjiLevel)
+    }
+
     init() {
         model = defaults.string(forKey: Keys.model) ?? Self.modelOptions[0].id
         inputLanguage = defaults.string(forKey: Keys.inputLanguage).flatMap { InputLanguage(rawValue: $0) } ?? .english
         showRomaji = defaults.object(forKey: Keys.showRomaji) as? Bool ?? true
         speakAutomatically = defaults.object(forKey: Keys.speakAutomatically) as? Bool ?? true
+        writingStyle = defaults.string(forKey: Keys.writingStyle).flatMap { WritingStyle(rawValue: $0) } ?? .schoolLevel
+        kanjiLevel = defaults.object(forKey: Keys.kanjiLevel) as? Int ?? 1
+        showFurigana = defaults.object(forKey: Keys.showFurigana) as? Bool ?? true
     }
 }

@@ -4,6 +4,7 @@ import SwiftUI
 /// and each stroke is checked for order, direction and shape.
 struct TracingView: View {
     let data: CharacterStrokes
+    var onFinished: ((Int) -> Void)?
 
     @AppStorage("tracingGuide") private var showGuide = true
 
@@ -183,6 +184,7 @@ struct TracingView: View {
             message = isFinished ? nil : Message(text: ["Good!", "Great!", "Nice!", "👍"].randomElement()!, isGood: true)
             if isFinished {
                 Pronouncer.shared.speak("よくできました")
+                onFinished?(mistakes == 0 ? 3 : mistakes <= 2 ? 2 : 1)
             }
         case .reversed:
             mistake("Almost! Start from the other end.")

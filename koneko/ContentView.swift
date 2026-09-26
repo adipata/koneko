@@ -5,6 +5,8 @@ struct ContentView: View {
     @State private var translator = Translator()
     @State private var settings = AppSettings()
     @State private var speech = SpeechInput()
+    @State private var history = HistoryStore()
+    @State private var showHistory = false
 
     @State private var input = ""
     @State private var selectedWord: WordCandidate?
@@ -27,8 +29,9 @@ struct ContentView: View {
                     inputSection
                     statusSection
                     if let word = selectedWord {
-                        WordCardView(word: word, showRomaji: settings.showRomaji)
-                        strokesSection(for: word)
+                        let shown = settings.display(word)
+                        WordCardView(word: shown, showRomaji: settings.showRomaji, showFurigana: settings.showFurigana)
+                        strokesSection(for: shown, original: word)
                     }
                 }
                 .padding()
@@ -37,7 +40,16 @@ struct ContentView: View {
             }
             .navigationTitle("Koneko 🐱")
             .toolbar {
+                Button("My words", systemImage: "book") { showHistory = true }
                 Button("Settings", systemImage: "gearshape") { showSettings = true }
+            }
+            .sheet(isPresented: $showHistory) {
+                HistoryView(history: history, style: settings.display) { word in
+                    translator.reset()
+                    heardAlternatives = []
+                    input = ""
+                    selectedWord = word
+                }
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView(settings: settings, translator: translator)
@@ -45,7 +57,9 @@ struct ContentView: View {
         }
         .task { await library.load() }
         .onChange(of: selectedWord) {
-            if let word = selectedWord, settings.speakAutomatically {
+            guard let word = selectedWord else { return }
+            history.record(word)
+            if settings.speakAutomatically {
                 Pronouncer.shared.speak(word.spokenText)
             }
         }
@@ -177,7 +191,7 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private func strokesSection(for word: WordCandidate) -> some View {
+    private func strokesSection(for word: WordCandidate, original: WordCandidate) -> some View {
         switch library.loadState {
         case .loading:
             ProgressView("Loading strokes…")
@@ -188,8 +202,10 @@ struct ContentView: View {
                 description: Text(message)
             )
         case .ready:
-            WordStrokesView(word: word, library: library, speaksOnTap: settings.speakAutomatically)
-                .id(word.id)
+            WordStrokesView(word: word, library: library, speaksOnTap: settings.speakAutomatically) { character, stars in
+                history.recordStars(stars, for: character, in: original)
+            }
+            .id(word.id)
         }
     }
 }

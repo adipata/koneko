@@ -6,6 +6,8 @@ struct WordStrokesView: View {
     let library: StrokeLibrary
     /// Say a character's sound when its tile is tapped.
     var speaksOnTap = true
+    /// Called with the stars (1–3) when she finishes writing a character in Practice.
+    var onPracticeFinished: ((Character, Int) -> Void)?
 
     @State private var selectedIndex = 0
     @AppStorage("strokeMode") private var mode = Mode.watch
@@ -48,7 +50,9 @@ struct WordStrokesView: View {
                         StrokeOrderView(data: data)
                             .id("watch-\(index)-\(character)")
                     case .practice:
-                        TracingView(data: data)
+                        TracingView(data: data) { stars in
+                            onPracticeFinished?(character, stars)
+                        }
                             .id("practice-\(index)-\(character)")
                     }
                 } else {
@@ -72,7 +76,7 @@ struct WordStrokesView: View {
             }
         } label: {
             Text(String(character))
-                .font(.system(size: 44))
+                .font(.handwriting(size: 46))
                 .frame(width: 72, height: 72)
                 .foregroundStyle(hasStrokes ? Color.primary : Color.secondary)
                 .background(

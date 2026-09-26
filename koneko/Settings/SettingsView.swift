@@ -73,6 +73,26 @@ struct SettingsView: View {
                     Text("Any model ID from openrouter.ai/models works.")
                 }
 
+                Section {
+                    Picker("Write words", selection: $settings.writingStyle) {
+                        ForEach(WritingStyle.allCases) { style in
+                            Text(style.displayName).tag(style)
+                        }
+                    }
+                    if settings.writingStyle == .schoolLevel {
+                        Picker("Kanji she knows", selection: $settings.kanjiLevel) {
+                            ForEach(0...7, id: \.self) { level in
+                                Text(WritingStyle.levelName(level)).tag(level)
+                            }
+                        }
+                    }
+                    Toggle("Show readings above kanji (furigana)", isOn: $settings.showFurigana)
+                } header: {
+                    Text("How words are written")
+                } footer: {
+                    Text("With “Only kanji she has learned”, kanji above her level are written in hiragana, like in Japanese children's books.")
+                }
+
                 Section("Learning") {
                     Picker("She types or says words in", selection: $settings.inputLanguage) {
                         ForEach(InputLanguage.allCases) { language in
