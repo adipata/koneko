@@ -4,14 +4,30 @@ import Speech
 /// Low-level microphone + speech recognition plumbing.
 ///
 /// This type is deliberately `nonisolated`: the audio tap and the recognition callbacks run on
-/// background threads, so they must not be main-actor closures. Every update is handed to
-/// `onUpdate`, which the caller hops back to the main actor. Start/stop are only called from
-/// the main actor.
+/// background threads, so they must not be main-actor closures. Updates are delivered, in order,
+/// through an `AsyncStream`. Start/stop are only called from the main actor.
 nonisolated final class SpeechEngine: @unchecked Sendable {
     nonisolated enum Update: Sendable {
         case level(Float)
-        case transcript(best: String, alternatives: [String], isFinal: Bool)
-        case finished(error: String?)
+        case transcript(best: String, alternatives: [String])
+        case finished(Failure?)
+    }
+
+    nonisolated struct Failure: Sendable {
+        let domain: String
+        let code: Int
+        let message: String
+
+        /// "No speech detected": not really an error, she just didn't say anything.
+        var isNoSpeech: Bool {
+            (domain == "kAFAssistantErrorDomain" && [203, 1110].contains(code))
+                || (domain == "kLSRErrorDomain" && code == 301 && message.localizedCaseInsensitiveContains("speech"))
+        }
+
+        /// We cancelled the request ourselves.
+        var isCancellation: Bool {
+            (domain == "kAFAssistantErrorDomain" && code == 216) || (domain == "kLSRErrorDomain" && code == 301)
+        }
     }
 
     nonisolated enum StartError: LocalizedError {
@@ -32,6 +48,11 @@ nonisolated final class SpeechEngine: @unchecked Sendable {
     private var recognizer: SFSpeechRecognizer?
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
+    private var continuation: AsyncStream<Update>.Continuation?
+
+    /// Copy of the audio, so we can try again with server recognition if on-device fails.
+    private let recordingLock = NSLock()
+    private var recording: [AVAudioPCMBuffer] = []
 
     static func requestPermissions() async -> Bool {
         let speechStatus = await withCheckedContinuation { continuation in
@@ -45,13 +66,25 @@ nonisolated final class SpeechEngine: @unchecked Sendable {
         #endif
     }
 
-    func start(locale: Locale, onUpdate: @escaping @Sendable (Update) -> Void) throws {
-        cancel()
-
-        guard let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable else {
-            throw StartError.recognizerUnavailable(locale.localizedString(forIdentifier: locale.identifier) ?? locale.identifier)
+    /// The best supported recognition locale for the language (e.g. en-LU → en-GB).
+    static func locale(for languageCode: String, preferred: Locale) -> Locale {
+        let supported = SFSpeechRecognizer.supportedLocales()
+        let fallbacks = languageCode == "ja" ? ["ja-JP"] : ["en-GB", "en-US"]
+        for identifier in [preferred.identifier(.bcp47)] + fallbacks {
+            if let match = supported.first(where: { $0.identifier(.bcp47) == identifier }) {
+                return match
+            }
         }
-        self.recognizer = recognizer
+        return supported.first { $0.language.languageCode?.identifier == languageCode }
+            ?? Locale(identifier: fallbacks.last!)
+    }
+
+    /// Starts the microphone and live recognition.
+    func start(locale: Locale) throws -> AsyncStream<Update> {
+        cancel()
+        recordingLock.withLock { recording = [] }
+
+        let recognizer = try makeRecognizer(locale: locale)
 
         #if os(iOS)
         let session = AVAudioSession.sharedInstance()
@@ -71,27 +104,43 @@ nonisolated final class SpeechEngine: @unchecked Sendable {
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else { throw StartError.noMicrophone }
 
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+        let (stream, continuation) = AsyncStream<Update>.makeStream()
+        self.continuation = continuation
+
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             request.append(buffer)
-            onUpdate(.level(Self.level(of: buffer)))
+            if let copy = buffer.copy() as? AVAudioPCMBuffer {
+                self?.recordingLock.withLock { self?.recording.append(copy) }
+            }
+            continuation.yield(.level(Self.level(of: buffer)))
         }
         audioEngine.prepare()
         try audioEngine.start()
 
-        task = recognizer.recognitionTask(with: request) { result, error in
-            if let result {
-                let best = result.bestTranscription.formattedString
-                let alternatives = result.transcriptions.map(\.formattedString).filter { $0 != best }
-                onUpdate(.transcript(best: best, alternatives: alternatives, isFinal: result.isFinal))
-                if result.isFinal {
-                    onUpdate(.finished(error: nil))
-                    return
-                }
-            }
-            if let error {
-                onUpdate(.finished(error: error.localizedDescription))
-            }
-        }
+        task = recognizer.recognitionTask(with: request, resultHandler: Self.resultHandler(continuation))
+        return stream
+    }
+
+    /// Whether the last `start` used on-device recognition.
+    var usedOnDevice: Bool { request?.requiresOnDeviceRecognition ?? false }
+
+    /// Runs server recognition on the audio recorded by the last `start`.
+    func recognizeRecording(locale: Locale) throws -> AsyncStream<Update> {
+        let buffers = recordingLock.withLock { recording }
+        cancel()
+        let recognizer = try makeRecognizer(locale: locale)
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = false
+        request.taskHint = .search
+        request.requiresOnDeviceRecognition = false
+        buffers.forEach(request.append)
+        request.endAudio()
+        self.request = request
+
+        let (stream, continuation) = AsyncStream<Update>.makeStream()
+        self.continuation = continuation
+        task = recognizer.recognitionTask(with: request, resultHandler: Self.resultHandler(continuation))
+        return stream
     }
 
     /// Stops listening; the recognizer then delivers its final result.
@@ -100,11 +149,47 @@ nonisolated final class SpeechEngine: @unchecked Sendable {
         request?.endAudio()
     }
 
+    /// Stops everything immediately and ends the update stream.
     func cancel() {
         stopAudio()
         task?.cancel()
         task = nil
         request = nil
+        continuation?.finish()
+        continuation = nil
+    }
+
+    private func makeRecognizer(locale: Locale) throws -> SFSpeechRecognizer {
+        guard let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable else {
+            let name = Locale.current.localizedString(forIdentifier: locale.identifier) ?? locale.identifier
+            throw StartError.recognizerUnavailable(name)
+        }
+        self.recognizer = recognizer
+        return recognizer
+    }
+
+    private static func resultHandler(
+        _ continuation: AsyncStream<Update>.Continuation
+    ) -> @Sendable (SFSpeechRecognitionResult?, (any Error)?) -> Void {
+        { result, error in
+            if let result {
+                let best = result.bestTranscription.formattedString
+                let alternatives = result.transcriptions.map(\.formattedString).filter { $0 != best }
+                continuation.yield(.transcript(best: best, alternatives: alternatives))
+                if result.isFinal {
+                    continuation.yield(.finished(nil))
+                    continuation.finish()
+                    return
+                }
+            }
+            if let error {
+                let nsError = error as NSError
+                continuation.yield(.finished(Failure(
+                    domain: nsError.domain, code: nsError.code, message: nsError.localizedDescription
+                )))
+                continuation.finish()
+            }
+        }
     }
 
     private func stopAudio() {

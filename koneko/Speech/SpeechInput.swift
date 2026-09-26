@@ -19,21 +19,28 @@ final class SpeechInput {
     private(set) var transcript = ""
     private(set) var level: Float = 0
     private(set) var errorMessage: String?
+    /// Why nothing was recognized, when we can tell (silence, recognizer error…).
+    private(set) var problem: String?
 
     private let engine = SpeechEngine()
     private var alternatives: [String] = []
-    private var finalContinuation: CheckedContinuation<Void, Never>?
-    private var receivedFinal = false
+    private var failure: SpeechEngine.Failure?
+    private var loudestLevel: Float = 0
+    private var locale = Locale(identifier: "en-US")
     private var hasPermission = false
     private var startTask: Task<Void, Never>?
+    private var listenTask: Task<Void, Never>?
 
     func start(language: InputLanguage) {
         guard status == .idle else { return }
         Pronouncer.shared.stop()
         errorMessage = nil
+        problem = nil
         transcript = ""
         alternatives = []
-        receivedFinal = false
+        failure = nil
+        loudestLevel = 0
+        listenTask = nil
         status = .listening
 
         startTask = Task {
@@ -47,9 +54,9 @@ final class SpeechInput {
             // She may already have let go while the permission dialog was showing.
             guard status == .listening, !Task.isCancelled else { return }
             do {
-                try engine.start(locale: Self.locale(for: language)) { [weak self] update in
-                    Task { @MainActor in self?.handle(update) }
-                }
+                locale = Self.locale(for: language)
+                let updates = try engine.start(locale: locale)
+                listenTask = Task { await consume(updates) }
             } catch {
                 fail(error.localizedDescription)
             }
@@ -62,42 +69,68 @@ final class SpeechInput {
         status = .finishing
         await startTask?.value
         engine.stop()
+        await waitForListenTask(seconds: 2.5)
 
-        // Wait for the final transcript, but never more than 2 seconds.
-        if !receivedFinal {
-            await withCheckedContinuation { continuation in
-                finalContinuation = continuation
-                Task {
-                    try? await Task.sleep(for: .seconds(2))
-                    self.resumeFinal()
-                }
+        // On-device recognition can fail (e.g. its language files aren't installed yet).
+        // Try once more with Apple's server recognition on the recorded audio.
+        if transcript.isEmpty, let failure, !failure.isNoSpeech, !failure.isCancellation, engine.usedOnDevice {
+            self.failure = nil
+            if let updates = try? engine.recognizeRecording(locale: locale) {
+                listenTask = Task { await consume(updates) }
+                await waitForListenTask(seconds: 6)
             }
         }
+
         engine.cancel()
         status = .idle
         level = 0
 
         let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        return text.isEmpty ? nil : Result(text: text, alternatives: alternatives)
+        if text.isEmpty {
+            problem = explainEmptyResult()
+            return nil
+        }
+        return Result(text: text, alternatives: alternatives)
     }
 
-    private func handle(_ update: SpeechEngine.Update) {
-        switch update {
-        case .level(let value):
-            if status == .listening { level = value }
-        case .transcript(let best, let alternatives, _):
-            transcript = best
-            self.alternatives = alternatives
-        case .finished:
-            // Errors here are usually "no speech detected"; an empty transcript covers that.
-            receivedFinal = true
-            resumeFinal()
+    private func consume(_ updates: AsyncStream<SpeechEngine.Update>) async {
+        for await update in updates {
+            switch update {
+            case .level(let value):
+                loudestLevel = max(loudestLevel, value)
+                if status == .listening { level = value }
+            case .transcript(let best, let alternatives):
+                transcript = best
+                self.alternatives = alternatives
+            case .finished(let failure):
+                self.failure = failure
+            }
         }
     }
 
-    private func resumeFinal() {
-        finalContinuation?.resume()
-        finalContinuation = nil
+    /// Waits for the recognizer to finish, cancelling it after `seconds`.
+    private func waitForListenTask(seconds: Double) async {
+        guard let listenTask else { return }
+        let timeout = Task {
+            try? await Task.sleep(for: .seconds(seconds))
+            if !Task.isCancelled { engine.cancel() } // ends the stream
+        }
+        await listenTask.value
+        timeout.cancel()
+    }
+
+    private func explainEmptyResult() -> String? {
+        if loudestLevel < 0.1 {
+            #if os(macOS)
+            return "The microphone only picked up silence. Check the input device in System Settings → Sound → Input."
+            #else
+            return "The microphone only picked up silence. Try speaking a bit louder."
+            #endif
+        }
+        if let failure, !failure.isNoSpeech, !failure.isCancellation {
+            return "Speech recognition didn't work: \(failure.message) (\(failure.domain) \(failure.code))"
+        }
+        return nil
     }
 
     private func fail(_ message: String) {
@@ -105,15 +138,12 @@ final class SpeechInput {
         errorMessage = message
         status = .idle
         level = 0
-        resumeFinal()
     }
 
     private static func locale(for language: InputLanguage) -> Locale {
         switch language {
-        case .english:
-            Locale.current.language.languageCode == .english ? Locale.current : Locale(identifier: "en-US")
-        case .japanese:
-            Locale(identifier: "ja-JP")
+        case .english: SpeechEngine.locale(for: "en", preferred: Locale.current)
+        case .japanese: SpeechEngine.locale(for: "ja", preferred: Locale(identifier: "ja-JP"))
         }
     }
 }

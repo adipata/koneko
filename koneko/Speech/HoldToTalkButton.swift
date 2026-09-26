@@ -94,7 +94,7 @@ struct HoldToTalkButton: View {
             } else if speech.errorMessage == nil {
                 hint = heldFor < 0.6
                     ? "Keep holding the button while you speak 🙂"
-                    : "I didn't hear a word. Try again!"
+                    : speech.problem ?? "I didn't hear a word. Try again!"
             }
         }
     }
