@@ -12,6 +12,8 @@ each character being written stroke by stroke.
   meaning. Results are cached on the device. Japanese typed directly skips the LLM.
 - **Phase 3 (done):** hold-to-talk speech input (on-device where supported) with live
   transcript and "Or did you say…" alternatives.
+- **Pronunciation:** the word is spoken with the best installed Japanese voice (from its kana
+  reading, so kanji are never misread); slow mode; tapping a character says its sound.
 - Next: Apple Pencil tracing, kanji-level display modes.
 
 ## Setup

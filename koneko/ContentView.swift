@@ -44,6 +44,11 @@ struct ContentView: View {
             }
         }
         .task { await library.load() }
+        .onChange(of: selectedWord) {
+            if let word = selectedWord, settings.speakAutomatically {
+                Pronouncer.shared.speak(word.spokenText)
+            }
+        }
         .onChange(of: translator.status) {
             if case .results(let candidates) = translator.status {
                 selectedWord = candidates.first
@@ -183,7 +188,7 @@ struct ContentView: View {
                 description: Text(message)
             )
         case .ready:
-            WordStrokesView(text: word.japanese, library: library)
+            WordStrokesView(word: word, library: library, speaksOnTap: settings.speakAutomatically)
                 .id(word.id)
         }
     }

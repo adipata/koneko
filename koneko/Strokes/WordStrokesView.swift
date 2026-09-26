@@ -2,13 +2,15 @@ import SwiftUI
 
 /// The characters of a word as tappable tiles, with the stroke animation for the selected one.
 struct WordStrokesView: View {
-    let text: String
+    let word: WordCandidate
     let library: StrokeLibrary
+    /// Say a character's sound when its tile is tapped.
+    var speaksOnTap = true
 
     @State private var selectedIndex = 0
 
     private var characters: [Character] {
-        Array(text.filter { !$0.isWhitespace })
+        Array(word.japanese.filter { !$0.isWhitespace })
     }
 
     var body: some View {
@@ -46,6 +48,9 @@ struct WordStrokesView: View {
         let hasStrokes = library.strokes(for: character) != nil
         return Button {
             selectedIndex = index
+            if speaksOnTap, let sound = spokenText(forTileAt: index) {
+                Pronouncer.shared.speak(sound)
+            }
         } label: {
             Text(String(character))
                 .font(.system(size: 44))
@@ -62,5 +67,15 @@ struct WordStrokesView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Character \(String(character))")
+    }
+
+    /// Tiles skip whitespace, so map the tile index back to the index in `word.japanese`.
+    private func spokenText(forTileAt tileIndex: Int) -> String? {
+        var tile = 0
+        for (index, character) in word.japanese.enumerated() where !character.isWhitespace {
+            if tile == tileIndex { return word.spokenText(forCharacterAt: index) }
+            tile += 1
+        }
+        return nil
     }
 }

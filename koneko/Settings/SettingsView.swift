@@ -11,6 +11,15 @@ struct SettingsView: View {
     @State private var customModel = ""
     @State private var showCredits = false
     @State private var confirmClear = false
+    private let pronouncer = Pronouncer.shared
+
+    private var voiceDownloadHint: String {
+        #if os(macOS)
+        "For a nicer voice, download a Japanese voice such as Kyoko (Enhanced or Premium): System Settings → Accessibility → Spoken Content → System Voice → Manage Voices."
+        #else
+        "For a nicer voice, download a Japanese voice such as Kyoko (Enhanced or Premium): Settings → Accessibility → Spoken Content → Voices → Japanese."
+        #endif
+    }
 
     private var isPresetModel: Bool {
         AppSettings.modelOptions.contains { $0.id == settings.model }
@@ -71,6 +80,21 @@ struct SettingsView: View {
                         }
                     }
                     Toggle("Show romaji (Latin letters)", isOn: $settings.showRomaji)
+                }
+
+                Section {
+                    Toggle("Say words automatically", isOn: $settings.speakAutomatically)
+                    LabeledContent("Japanese voice", value: pronouncer.voiceDescription)
+                    Button("Test voice") {
+                        pronouncer.refreshVoice()
+                        pronouncer.speak("こんにちは。ねこ。")
+                    }
+                } header: {
+                    Text("Pronunciation")
+                } footer: {
+                    Text(pronouncer.hasGoodVoice
+                         ? "Using a high-quality voice."
+                         : voiceDownloadHint)
                 }
 
                 Section {

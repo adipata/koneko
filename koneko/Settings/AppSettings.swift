@@ -20,6 +20,7 @@ final class AppSettings {
         static let model = "model"
         static let inputLanguage = "inputLanguage"
         static let showRomaji = "showRomaji"
+        static let speakAutomatically = "speakAutomatically"
     }
 
     private let defaults = UserDefaults.standard
@@ -36,9 +37,14 @@ final class AppSettings {
         didSet { defaults.set(showRomaji, forKey: Keys.showRomaji) }
     }
 
+    var speakAutomatically: Bool {
+        didSet { defaults.set(speakAutomatically, forKey: Keys.speakAutomatically) }
+    }
+
     init() {
         model = defaults.string(forKey: Keys.model) ?? Self.modelOptions[0].id
         inputLanguage = defaults.string(forKey: Keys.inputLanguage).flatMap { InputLanguage(rawValue: $0) } ?? .english
         showRomaji = defaults.object(forKey: Keys.showRomaji) as? Bool ?? true
+        speakAutomatically = defaults.object(forKey: Keys.speakAutomatically) as? Bool ?? true
     }
 }

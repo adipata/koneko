@@ -11,6 +11,18 @@ struct WordCardView: View {
                 Text(word.emoji).font(.system(size: 56))
             }
             FuriganaText(parts: word.parts)
+            HStack(spacing: 16) {
+                Button("Say it", systemImage: "speaker.wave.2.fill") {
+                    Pronouncer.shared.speak(word.spokenText)
+                }
+                Button("Say it slowly", systemImage: "tortoise.fill") {
+                    Pronouncer.shared.speak(word.spokenText, slow: true)
+                }
+            }
+            .labelStyle(.iconOnly)
+            .font(.title2)
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
             if showRomaji, !word.romaji.isEmpty {
                 Text(word.romaji)
                     .font(.title3)

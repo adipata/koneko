@@ -29,6 +29,7 @@ final class SpeechInput {
 
     func start(language: InputLanguage) {
         guard status == .idle else { return }
+        Pronouncer.shared.stop()
         errorMessage = nil
         transcript = ""
         alternatives = []
