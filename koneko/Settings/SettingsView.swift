@@ -6,6 +6,8 @@ struct SettingsView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var apiKey = Keychain.apiKey ?? ""
+    @State private var savedKey = Keychain.apiKey ?? ""
+    @State private var keyError: String?
     @State private var customModel = ""
     @State private var showCredits = false
     @State private var confirmClear = false
@@ -18,9 +20,15 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    SecureField("sk-or-…", text: $apiKey)
+                    SecureField("API key", text: $apiKey, prompt: Text("sk-or-…"))
                         .autocorrectionDisabled()
-                        .onSubmit(saveKey)
+                        .onSubmit { saveKey() }
+                    HStack {
+                        keyStatus
+                        Spacer()
+                        Button("Save key") { saveKey() }
+                            .disabled(trimmedKey == savedKey)
+                    }
                     Link("Get a key at openrouter.ai/keys", destination: URL(string: "https://openrouter.ai/keys")!)
                 } header: {
                     Text("OpenRouter API key")
@@ -42,10 +50,9 @@ struct SettingsView: View {
                         }
                     }
                     .pickerStyle(.inline)
-                    .labelsHidden()
 
                     HStack {
-                        TextField("Other model ID, e.g. anthropic/claude-haiku-4.5", text: $customModel)
+                        TextField("Other model", text: $customModel, prompt: Text("e.g. anthropic/claude-haiku-4.5"))
                             .autocorrectionDisabled()
                             .onSubmit(useCustomModel)
                         Button("Use", action: useCustomModel)
@@ -79,22 +86,60 @@ struct SettingsView: View {
                     Button("Credits") { showCredits = true }
                 }
             }
+            .formStyle(.grouped)
             .navigationTitle("Settings")
             .toolbar {
-                Button("Done") {
-                    saveKey()
-                    dismiss()
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        if saveKey() { dismiss() }
+                    }
                 }
             }
             .sheet(isPresented: $showCredits) { CreditsView() }
+            #if os(macOS)
+            .frame(minWidth: 520, idealWidth: 560, minHeight: 620, idealHeight: 700)
+            #endif
             .confirmationDialog("Forget all saved words?", isPresented: $confirmClear) {
                 Button("Forget saved words", role: .destructive) { translator.clearCache() }
             }
         }
     }
 
-    private func saveKey() {
-        Keychain.apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    private var trimmedKey: String {
+        apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    @ViewBuilder
+    private var keyStatus: some View {
+        if let keyError {
+            Label(keyError, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.red)
+        } else if savedKey.isEmpty {
+            Label("No key saved yet", systemImage: "key")
+                .foregroundStyle(.secondary)
+        } else if trimmedKey == savedKey {
+            Label("Key saved", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        } else {
+            Label("Not saved yet", systemImage: "pencil")
+                .foregroundStyle(.orange)
+        }
+    }
+
+    /// Saves the key if it changed. Returns false if saving failed.
+    @discardableResult
+    private func saveKey() -> Bool {
+        let key = trimmedKey
+        guard key != savedKey else { return true }
+        keyError = Keychain.setAPIKey(key)
+        guard keyError == nil else { return false }
+        // Read it back to be sure it's really stored.
+        savedKey = Keychain.apiKey ?? ""
+        if savedKey != key {
+            keyError = "The key was saved but couldn't be read back from the Keychain."
+            return false
+        }
+        return true
     }
 
     private func useCustomModel() {

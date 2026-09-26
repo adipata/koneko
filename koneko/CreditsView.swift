@@ -14,8 +14,13 @@ struct CreditsView: View {
             }
             .navigationTitle("Credits")
             .toolbar {
-                Button("Done") { dismiss() }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
             }
+            #if os(macOS)
+            .frame(minWidth: 420, minHeight: 260)
+            #endif
         }
     }
 }
