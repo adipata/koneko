@@ -2,14 +2,19 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var library = StrokeLibrary()
-    @State private var input = "ねこ"
-    @State private var selectedIndex = 0
-    @State private var showCredits = false
+    @State private var translator = Translator()
+    @State private var settings = AppSettings()
 
-    private static let sampleWords = ["ねこ", "猫", "いぬ", "学校", "ありがとう", "カタカナ", "日本"]
+    @State private var input = ""
+    @State private var selectedWord: WordCandidate?
+    @State private var showSettings = false
+    @FocusState private var inputFocused: Bool
 
-    private var characters: [Character] {
-        Array(input.filter { !$0.isWhitespace })
+    private var sampleWords: [String] {
+        switch settings.inputLanguage {
+        case .english: ["cat", "dog", "school", "apple", "rain", "thank you", "bat"]
+        case .japanese: ["ねこ", "猫", "がっこう", "はし", "ありがとう"]
+        }
     }
 
     var body: some View {
@@ -17,19 +22,10 @@ struct ContentView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     inputSection
-
-                    switch library.loadState {
-                    case .loading:
-                        ProgressView("Loading strokes…")
-                            .padding(.top, 40)
-                    case .failed(let message):
-                        ContentUnavailableView(
-                            "Couldn't load stroke data",
-                            systemImage: "exclamationmark.triangle",
-                            description: Text(message)
-                        )
-                    case .ready:
-                        wordSection
+                    statusSection
+                    if let word = selectedWord {
+                        WordCardView(word: word, showRomaji: settings.showRomaji)
+                        strokesSection(for: word)
                     }
                 }
                 .padding()
@@ -38,89 +34,129 @@ struct ContentView: View {
             }
             .navigationTitle("Koneko 🐱")
             .toolbar {
-                Button("Credits", systemImage: "info.circle") { showCredits = true }
+                Button("Settings", systemImage: "gearshape") { showSettings = true }
             }
-            .sheet(isPresented: $showCredits) { CreditsView() }
+            .sheet(isPresented: $showSettings) {
+                SettingsView(settings: settings, translator: translator)
+            }
         }
         .task { await library.load() }
-        .onChange(of: input) { selectedIndex = 0 }
+        .onChange(of: translator.status) {
+            if case .results(let candidates) = translator.status {
+                selectedWord = candidates.first
+            }
+        }
     }
 
     // MARK: Input
 
     private var inputSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField("Type a Japanese word, e.g. ねこ or 猫", text: $input)
-                .font(.title2)
-                .textFieldStyle(.roundedBorder)
-                .autocorrectionDisabled()
+            HStack {
+                TextField(placeholder, text: $input)
+                    .font(.title2)
+                    .textFieldStyle(.roundedBorder)
+                    .autocorrectionDisabled()
+                    .focused($inputFocused)
+                    .submitLabel(.search)
+                    .onSubmit(lookUp)
+                Button("Look up", systemImage: "magnifyingglass", action: lookUp)
+                    .labelStyle(.iconOnly)
+                    .font(.title2)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack {
-                    ForEach(Self.sampleWords, id: \.self) { word in
-                        Button(word) { input = word }
-                            .buttonStyle(.bordered)
+                    ForEach(sampleWords, id: \.self) { word in
+                        Button(word) {
+                            input = word
+                            lookUp()
+                        }
+                        .buttonStyle(.bordered)
                     }
                 }
             }
         }
     }
 
-    // MARK: Word and strokes
+    private var placeholder: String {
+        switch settings.inputLanguage {
+        case .english: "Type a word in English, e.g. cat"
+        case .japanese: "Type a word in Japanese or romaji"
+        }
+    }
+
+    private func lookUp() {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        inputFocused = false
+        selectedWord = nil
+        if JapaneseText.isJapanese(text) {
+            // Already written in Japanese: show it directly, no AI needed.
+            translator.reset()
+            selectedWord = .direct(text)
+        } else {
+            translator.translate(text, language: settings.inputLanguage, settings: settings)
+            // Saved words answer instantly, and onChange won't fire if the result is unchanged.
+            if case .results(let candidates) = translator.status {
+                selectedWord = candidates.first
+            }
+        }
+    }
+
+    // MARK: Results
 
     @ViewBuilder
-    private var wordSection: some View {
-        if characters.isEmpty {
-            ContentUnavailableView(
-                "Type a word",
-                systemImage: "pencil.and.scribble",
-                description: Text("Then tap a character to see how it's written.")
-            )
-        } else {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(Array(characters.enumerated()), id: \.offset) { index, character in
-                        characterTile(character, index: index)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-
-            let index = min(selectedIndex, characters.count - 1)
-            let character = characters[index]
-            if let data = library.strokes(for: character) {
-                StrokeOrderView(data: data)
-                    .id("\(index)-\(character)")
-            } else {
+    private var statusSection: some View {
+        switch translator.status {
+        case .idle:
+            if selectedWord == nil {
                 ContentUnavailableView(
-                    "No stroke order for “\(String(character))”",
-                    systemImage: "questionmark.square.dashed",
-                    description: Text("Stroke data covers hiragana, katakana and kanji.")
+                    "What word do you want to write?",
+                    systemImage: "pencil.and.scribble",
+                    description: Text("Type it above and I'll show you how to write it in Japanese.")
                 )
+            }
+        case .loading:
+            ProgressView("Looking it up…")
+                .padding(.top, 24)
+        case .failed(let message):
+            VStack(spacing: 12) {
+                Label(message, systemImage: "exclamationmark.triangle")
+                    .multilineTextAlignment(.center)
+                HStack {
+                    Button("Try again", action: lookUp)
+                    Button("Settings") { showSettings = true }
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding()
+        case .results(let candidates):
+            if candidates.isEmpty {
+                Label("I couldn't find a Japanese word for that. Try another word!", systemImage: "questionmark.circle")
+            } else if candidates.count > 1 {
+                CandidatePicker(candidates: candidates, selection: $selectedWord)
             }
         }
     }
 
-    private func characterTile(_ character: Character, index: Int) -> some View {
-        let isSelected = index == min(selectedIndex, characters.count - 1)
-        let hasStrokes = library.strokes(for: character) != nil
-        return Button {
-            selectedIndex = index
-        } label: {
-            Text(String(character))
-                .font(.system(size: 44))
-                .frame(width: 72, height: 72)
-                .foregroundStyle(hasStrokes ? Color.primary : Color.secondary)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(isSelected ? Color.orange.opacity(0.2) : Color.secondary.opacity(0.08))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(isSelected ? Color.orange : Color.clear, lineWidth: 3)
-                )
+    @ViewBuilder
+    private func strokesSection(for word: WordCandidate) -> some View {
+        switch library.loadState {
+        case .loading:
+            ProgressView("Loading strokes…")
+        case .failed(let message):
+            ContentUnavailableView(
+                "Couldn't load stroke data",
+                systemImage: "exclamationmark.triangle",
+                description: Text(message)
+            )
+        case .ready:
+            WordStrokesView(text: word.japanese, library: library)
+                .id(word.id)
         }
-        .buttonStyle(.plain)
     }
 }
 

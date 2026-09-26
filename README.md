@@ -5,10 +5,17 @@ each character being written stroke by stroke.
 
 ## Status
 
-- **Phase 1 (done):** type a Japanese word, tap a character, and watch an animated stroke-order
-  diagram with stroke numbers, play/pause, step, replay and speed control.
-- Next: English → Japanese translation via OpenRouter, hold-to-talk speech input,
-  Apple Pencil tracing, kanji-level display modes.
+- **Phase 1 (done):** tap a character and watch an animated stroke-order diagram with stroke
+  numbers, play/pause, step, replay and speed control.
+- **Phase 2 (done):** type a word in English (or Japanese/romaji); an LLM via
+  [OpenRouter](https://openrouter.ai) suggests Japanese words with emoji, furigana, romaji and
+  meaning. Results are cached on the device. Japanese typed directly skips the LLM.
+- Next: hold-to-talk speech input, Apple Pencil tracing, kanji-level display modes.
+
+## Setup
+
+Open Settings (gear icon) in the app and paste an OpenRouter API key. It is stored in the
+Keychain. The model can be changed there too (default: `google/gemini-3.7-flash`).
 
 ## Stroke data
 
