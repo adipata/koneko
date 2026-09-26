@@ -255,9 +255,12 @@
 				DEVELOPMENT_TEAM = X3AS75R249;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Koneko listens to the word you say so it can show you how to write it in Japanese.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Koneko turns the word you say into text to find it in Japanese.";
 				INFOPLIST_KEY_CFBundleDisplayName = Koneko;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -296,9 +299,12 @@
 				DEVELOPMENT_TEAM = X3AS75R249;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Koneko listens to the word you say so it can show you how to write it in Japanese.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Koneko turns the word you say into text to find it in Japanese.";
 				INFOPLIST_KEY_CFBundleDisplayName = Koneko;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

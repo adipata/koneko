@@ -4,9 +4,12 @@ struct ContentView: View {
     @State private var library = StrokeLibrary()
     @State private var translator = Translator()
     @State private var settings = AppSettings()
+    @State private var speech = SpeechInput()
 
     @State private var input = ""
     @State private var selectedWord: WordCandidate?
+    /// Other things speech recognition thought she might have said.
+    @State private var heardAlternatives: [String] = []
     @State private var showSettings = false
     @FocusState private var inputFocused: Bool
 
@@ -52,6 +55,31 @@ struct ContentView: View {
 
     private var inputSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            HoldToTalkButton(speech: speech, language: settings.inputLanguage) { result in
+                input = result.text
+                lookUp()
+                heardAlternatives = Array(result.alternatives.prefix(3))
+            }
+            .frame(maxWidth: .infinity)
+
+            if !heardAlternatives.isEmpty {
+                HStack {
+                    Text("Or did you say:")
+                        .foregroundStyle(.secondary)
+                    ForEach(heardAlternatives, id: \.self) { alternative in
+                        Button(alternative) {
+                            // Swap: the word shown now becomes one of the alternatives.
+                            let others = heardAlternatives.map { $0 == alternative ? input : $0 }
+                            input = alternative
+                            lookUp()
+                            heardAlternatives = others
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+
             HStack {
                 TextField(placeholder, text: $input)
                     .font(.title2)
@@ -93,6 +121,7 @@ struct ContentView: View {
         guard !text.isEmpty else { return }
         inputFocused = false
         selectedWord = nil
+        heardAlternatives = []
         if JapaneseText.isJapanese(text) {
             // Already written in Japanese: show it directly, no AI needed.
             translator.reset()
@@ -116,7 +145,7 @@ struct ContentView: View {
                 ContentUnavailableView(
                     "What word do you want to write?",
                     systemImage: "pencil.and.scribble",
-                    description: Text("Type it above and I'll show you how to write it in Japanese.")
+                    description: Text("Say it or type it, and I'll show you how to write it in Japanese.")
                 )
             }
         case .loading:

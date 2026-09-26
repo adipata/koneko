@@ -10,7 +10,9 @@ each character being written stroke by stroke.
 - **Phase 2 (done):** type a word in English (or Japanese/romaji); an LLM via
   [OpenRouter](https://openrouter.ai) suggests Japanese words with emoji, furigana, romaji and
   meaning. Results are cached on the device. Japanese typed directly skips the LLM.
-- Next: hold-to-talk speech input, Apple Pencil tracing, kanji-level display modes.
+- **Phase 3 (done):** hold-to-talk speech input (on-device where supported) with live
+  transcript and "Or did you say…" alternatives.
+- Next: Apple Pencil tracing, kanji-level display modes.
 
 ## Setup
 
