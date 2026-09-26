@@ -14,7 +14,10 @@ each character being written stroke by stroke.
   transcript and "Or did you say…" alternatives.
 - **Pronunciation:** the word is spoken with the best installed Japanese voice (from its kana
   reading, so kanji are never misread); slow mode; tapping a character says its sound.
-- Next: Apple Pencil tracing, kanji-level display modes.
+- **Phase 4 (done):** Practice mode: write each character with Apple Pencil, finger or mouse;
+  every stroke is checked for order, direction and shape, with a demo of the right stroke
+  after a mistake, an optional guide, and stars at the end.
+- Next: kanji-level display modes, history, rewards.
 
 ## Setup
 

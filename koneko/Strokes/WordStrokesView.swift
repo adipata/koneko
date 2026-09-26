@@ -8,6 +8,12 @@ struct WordStrokesView: View {
     var speaksOnTap = true
 
     @State private var selectedIndex = 0
+    @AppStorage("strokeMode") private var mode = Mode.watch
+
+    enum Mode: String {
+        case watch
+        case practice
+    }
 
     private var characters: [Character] {
         Array(word.japanese.filter { !$0.isWhitespace })
@@ -30,8 +36,21 @@ struct WordStrokesView: View {
                 let index = min(selectedIndex, characters.count - 1)
                 let character = characters[index]
                 if let data = library.strokes(for: character) {
-                    StrokeOrderView(data: data)
-                        .id("\(index)-\(character)")
+                    Picker("Mode", selection: $mode) {
+                        Label("Watch", systemImage: "play.circle").tag(Mode.watch)
+                        Label("Practice", systemImage: "pencil.tip").tag(Mode.practice)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 320)
+
+                    switch mode {
+                    case .watch:
+                        StrokeOrderView(data: data)
+                            .id("watch-\(index)-\(character)")
+                    case .practice:
+                        TracingView(data: data)
+                            .id("practice-\(index)-\(character)")
+                    }
                 } else {
                     ContentUnavailableView(
                         "No stroke order for “\(String(character))”",
