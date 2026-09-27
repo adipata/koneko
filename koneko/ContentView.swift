@@ -122,6 +122,16 @@ struct ContentView: View {
                     .focused($inputFocused)
                     .submitLabel(.search)
                     .onSubmit(lookUp)
+                    .overlay(alignment: .trailing) {
+                        if !input.isEmpty {
+                            Button("Clear", systemImage: "xmark.circle.fill", action: clearInput)
+                                .labelStyle(.iconOnly)
+                                .foregroundStyle(.secondary)
+                                .buttonStyle(.plain)
+                                .padding(.trailing, 8)
+                                .help("Clear the word")
+                        }
+                    }
                 Button("Look up", systemImage: "magnifyingglass", action: lookUp)
                     .labelStyle(.iconOnly)
                     .font(.title2)
@@ -129,6 +139,14 @@ struct ContentView: View {
                     .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
+    }
+
+    /// Empties the text field and puts the cursor there, ready for a new word.
+    /// The current word stays on screen until the new one is looked up.
+    private func clearInput() {
+        input = ""
+        heardAlternatives = []
+        inputFocused = true
     }
 
     /// The typed/dictated text as a word, if it's already in Japanese script.
