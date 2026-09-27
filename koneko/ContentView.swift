@@ -16,6 +16,8 @@ struct ContentView: View {
     @State private var heardAlternatives: [String] = []
     @State private var showSettings = false
     @FocusState private var inputFocused: Bool
+    /// Changing it recreates the text field (see `clearInput`).
+    @State private var fieldResetID = 0
 
     var body: some View {
         NavigationStack {
@@ -122,8 +124,11 @@ struct ContentView: View {
                     .focused($inputFocused)
                     .submitLabel(.search)
                     .onSubmit(lookUp)
+                    .id(fieldResetID)
                     .overlay(alignment: .trailing) {
-                        if !input.isEmpty {
+                        // Also shown while focused: while the Japanese keyboard is still
+                        // composing (underlined text), `input` may not be updated yet.
+                        if !input.isEmpty || inputFocused {
                             Button("Clear", systemImage: "xmark.circle.fill", action: clearInput)
                                 .labelStyle(.iconOnly)
                                 .foregroundStyle(.secondary)
@@ -143,10 +148,19 @@ struct ContentView: View {
 
     /// Empties the text field and puts the cursor there, ready for a new word.
     /// The current word stays on screen until the new one is looked up.
+    ///
+    /// With the Japanese keyboard, text that is still being composed (underlined) belongs to the
+    /// keyboard, and iOS ignores `input = ""` for it. Recreating the text field drops that
+    /// half-typed text, then the cursor goes back into the new, empty field.
     private func clearInput() {
+        inputFocused = false
         input = ""
         heardAlternatives = []
-        inputFocused = true
+        fieldResetID += 1
+        Task {
+            try? await Task.sleep(for: .milliseconds(150))
+            inputFocused = true
+        }
     }
 
     /// The typed/dictated text as a word, if it's already in Japanese script.
