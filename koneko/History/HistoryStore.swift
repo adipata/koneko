@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 /// A word she looked up, with the best stars she earned per character in Practice.
 nonisolated struct HistoryEntry: Codable, Identifiable, Sendable {
