@@ -5,6 +5,11 @@ import SwiftUI
 struct WatchWordListView: View {
     let store: WatchStore
     @Environment(\.scenePhase) private var scenePhase
+    @State private var searchText = ""
+
+    private var isSearching: Bool {
+        !searchText.trimmingCharacters(in: .whitespaces).isEmpty
+    }
 
     var body: some View {
         NavigationStack {
@@ -13,29 +18,36 @@ struct WatchWordListView: View {
                     emptyState
                 } else {
                     List {
-                        if !store.pinned.isEmpty {
-                            Section("📌 Pinned") {
-                                rows(store.pinned)
+                        if isSearching {
+                            let results = store.entries.searched(searchText)
+                            Section(results.isEmpty ? "Nothing found" : "\(results.count) found") {
+                                rows(results)
                             }
-                        }
-                        if !store.folders.isEmpty {
-                            Section("Folders") {
-                                ForEach(store.folders) { folder in
-                                    NavigationLink {
-                                        WatchFolderView(store: store, folder: folder)
-                                    } label: {
-                                        HStack {
-                                            Text("📁 \(folder.name)")
-                                            Spacer()
-                                            Text("\(store.entries(in: folder).count)")
-                                                .foregroundStyle(.secondary)
+                        } else {
+                            if !store.pinned.isEmpty {
+                                Section("📌 Pinned") {
+                                    rows(store.pinned)
+                                }
+                            }
+                            if !store.folders.isEmpty {
+                                Section("Folders") {
+                                    ForEach(store.folders) { folder in
+                                        NavigationLink {
+                                            WatchFolderView(store: store, folder: folder)
+                                        } label: {
+                                            HStack {
+                                                Text("📁 \(folder.name)")
+                                                Spacer()
+                                                Text("\(store.entries(in: folder).count)")
+                                                    .foregroundStyle(.secondary)
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                        Section("All words") {
-                            rows(store.entries)
+                            Section("All words") {
+                                rows(store.entries)
+                            }
                         }
                         Section {
                             refreshButton
@@ -46,6 +58,7 @@ struct WatchWordListView: View {
                         }
                     }
                     .refreshable { await store.refresh() }
+                    .searchable(text: $searchText, prompt: "Search in English")
                 }
             }
             .navigationTitle("Koneko")

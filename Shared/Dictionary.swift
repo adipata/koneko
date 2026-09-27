@@ -10,6 +10,8 @@ nonisolated struct HistoryEntry: Codable, Identifiable, Sendable {
     var isPinned = false
     /// The folder (category) it's in, if any.
     var folderID: UUID?
+    /// What she typed or said to find it (e.g. "kitty"), so searching for that finds it too.
+    var lookedUpAs: [String] = []
 
     var id: String { word.id }
     var totalStars: Int { stars.values.reduce(0, +) }
@@ -23,7 +25,7 @@ nonisolated struct HistoryEntry: Codable, Identifiable, Sendable {
 
     // Tolerant decoding: files saved before pins and folders existed don't have those fields.
     private enum CodingKeys: String, CodingKey {
-        case word, lastUsed, timesUsed, stars, isPinned, folderID
+        case word, lastUsed, timesUsed, stars, isPinned, folderID, lookedUpAs
     }
 
     init(from decoder: any Decoder) throws {
@@ -34,6 +36,7 @@ nonisolated struct HistoryEntry: Codable, Identifiable, Sendable {
         stars = try container.decodeIfPresent([String: Int].self, forKey: .stars) ?? [:]
         isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
         folderID = try container.decodeIfPresent(UUID.self, forKey: .folderID)
+        lookedUpAs = try container.decodeIfPresent([String].self, forKey: .lookedUpAs) ?? []
     }
 }
 
@@ -73,5 +76,30 @@ nonisolated struct DictionaryFile: Codable, Sendable {
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         return try encoder.encode(self)
+    }
+}
+
+extension HistoryEntry {
+    /// Search in English (meaning and what she typed), plus romaji and the Japanese itself.
+    /// Ignores case and accents: "koko" finds "kōkō".
+    nonisolated func matches(_ query: String) -> Bool {
+        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return true }
+        let fields = [word.meaning, word.romaji, word.japanese, word.reading] + lookedUpAs
+        return fields.contains { $0.range(of: query, options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]) != nil }
+    }
+}
+
+extension [HistoryEntry] {
+    /// Entries matching the search, best matches first (meaning starting with the query first).
+    nonisolated func searched(_ query: String) -> [HistoryEntry] {
+        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return self }
+        let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive, .anchored]
+        let startsWith = filter { entry in
+            ([entry.word.meaning] + entry.lookedUpAs).contains { $0.range(of: query, options: options) != nil }
+        }
+        let others = filter { entry in entry.matches(query) && !startsWith.contains { $0.id == entry.id } }
+        return startsWith + others
     }
 }

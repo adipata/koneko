@@ -56,7 +56,8 @@ struct ContentView: View {
         }
         .onChange(of: selectedWord) {
             guard let word = selectedWord else { return }
-            history.record(word)
+            let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+            history.record(word, lookedUpAs: JapaneseText.isJapanese(typed) ? nil : typed)
             if settings.speakAutomatically {
                 Pronouncer.shared.speak(word.spokenText)
             }

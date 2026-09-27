@@ -22,15 +22,21 @@ final class HistoryStore {
 
     // MARK: Words
 
-    func record(_ word: WordCandidate) {
+    /// Adds or moves the word to the top. `lookedUpAs` is the English she typed or said.
+    func record(_ word: WordCandidate, lookedUpAs: String? = nil) {
+        var entry: HistoryEntry
         if let index = entries.firstIndex(where: { $0.id == word.id }) {
-            var entry = entries.remove(at: index)
+            entry = entries.remove(at: index)
             entry.lastUsed = .now
             entry.timesUsed += 1
-            entries.insert(entry, at: 0)
         } else {
-            entries.insert(HistoryEntry(word: word), at: 0)
+            entry = HistoryEntry(word: word)
         }
+        if let text = lookedUpAs?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty,
+           !entry.lookedUpAs.contains(where: { $0.caseInsensitiveCompare(text) == .orderedSame }) {
+            entry.lookedUpAs.append(text)
+        }
+        entries.insert(entry, at: 0)
         save()
     }
 

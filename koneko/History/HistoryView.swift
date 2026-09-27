@@ -14,6 +14,7 @@ struct HistoryView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var filter = Filter.all
+    @State private var searchText = ""
 
     // Folder create / rename
     @State private var showFolderNameAlert = false
@@ -33,6 +34,7 @@ struct HistoryView: View {
                 content
             }
             .navigationTitle("My words")
+            .searchable(text: $searchText, prompt: "Search in English")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -108,6 +110,31 @@ struct HistoryView: View {
 
     @ViewBuilder
     private var content: some View {
+        if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+            searchResults
+        } else {
+            browseList
+        }
+    }
+
+    /// While searching, look through all her words (not only the selected folder).
+    @ViewBuilder
+    private var searchResults: some View {
+        let results = history.entries.searched(searchText)
+        if results.isEmpty {
+            ContentUnavailableView.search(text: searchText)
+                .frame(maxHeight: .infinity)
+        } else {
+            List {
+                Section("\(results.count) found") {
+                    ForEach(results) { row($0) }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var browseList: some View {
         let entries = filtered
         if entries.isEmpty {
             ContentUnavailableView(emptyTitle, systemImage: "book", description: Text(emptyDescription))
