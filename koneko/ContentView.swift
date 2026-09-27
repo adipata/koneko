@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var speech = SpeechInput()
     @State private var history = HistoryStore()
     @State private var showHistory = false
+    @State private var lastLookupWasJapanese = false
 
     @State private var input = ""
     @State private var selectedWord: WordCandidate?
@@ -64,8 +65,14 @@ struct ContentView: View {
             }
         }
         .onChange(of: translator.status) {
-            if case .results(let candidates) = translator.status {
-                selectedWord = candidates.first
+            switch translator.status {
+            case .results(let candidates):
+                selectedWord = candidates.first ?? directWordIfJapanese()
+            case .failed where lastLookupWasJapanese:
+                // Offline or AI error: Japanese text can still be shown and practised.
+                selectedWord = directWordIfJapanese()
+            default:
+                break
             }
         }
     }
@@ -74,6 +81,16 @@ struct ContentView: View {
 
     private var inputSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Picker("I speak", selection: languageBinding) {
+                Text("🇬🇧 English").tag(InputLanguage.english)
+                Text("🇯🇵 日本語").tag(InputLanguage.japanese)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 300)
+            .frame(maxWidth: .infinity)
+            .disabled(speech.status != .idle)
+
             HoldToTalkButton(speech: speech, language: settings.inputLanguage) { result in
                 input = result.text
                 lookUp()
@@ -126,6 +143,19 @@ struct ContentView: View {
         }
     }
 
+    /// The typed/dictated text as a word, if it's already in Japanese script.
+    private func directWordIfJapanese() -> WordCandidate? {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        return lastLookupWasJapanese && JapaneseText.isJapanese(text) ? .direct(text) : nil
+    }
+
+    private var languageBinding: Binding<InputLanguage> {
+        Binding(
+            get: { settings.inputLanguage },
+            set: { settings.inputLanguage = $0; heardAlternatives = [] }
+        )
+    }
+
     private var placeholder: String {
         switch settings.inputLanguage {
         case .english: "Type a word in English, e.g. cat"
@@ -139,12 +169,17 @@ struct ContentView: View {
         inputFocused = false
         selectedWord = nil
         heardAlternatives = []
-        if JapaneseText.isJapanese(text) {
-            // Already written in Japanese: show it directly, no AI needed.
+        let isJapaneseScript = JapaneseText.isJapanese(text)
+        lastLookupWasJapanese = isJapaneseScript
+        if isJapaneseScript, (Keychain.apiKey ?? "").isEmpty {
+            // Already written in Japanese and no AI available: show it directly.
             translator.reset()
             selectedWord = .direct(text)
         } else {
-            translator.translate(text, language: settings.inputLanguage, settings: settings)
+            // Japanese text (typed or dictated) still goes to the AI to get the reading,
+            // meaning and emoji, and to offer other words that sound the same.
+            let language: InputLanguage = isJapaneseScript ? .japanese : settings.inputLanguage
+            translator.translate(text, language: language, settings: settings)
             // Saved words answer instantly, and onChange won't fire if the result is unchanged.
             if case .results(let candidates) = translator.status {
                 selectedWord = candidates.first

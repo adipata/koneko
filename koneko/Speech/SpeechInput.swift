@@ -85,7 +85,8 @@ final class SpeechInput {
         status = .idle
         level = 0
 
-        let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Dictation adds sentence punctuation (。 or .), which isn't part of the word.
+        let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
         if text.isEmpty {
             problem = explainEmptyResult()
             return nil
