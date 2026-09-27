@@ -121,3 +121,62 @@ extension WordCandidate {
         parts = try container.decodeIfPresent([Part].self, forKey: .parts) ?? []
     }
 }
+
+extension WordCandidate {
+    /// Romaji for each character of `japanese` (same order and count).
+    /// Kana are grouped into syllables (きょ → "kyo" on き, nothing on ょ; っ shows the doubled
+    /// consonant); a kanji shows the reading of its part in this word.
+    nonisolated func romajiPerCharacter() -> [String] {
+        let characters = Array(japanese)
+        var result: [String] = []
+        for part in parts {
+            let partCharacters = Array(part.text)
+            if JapaneseText.containsKanji(part.text) {
+                let partRomaji = part.reading.isEmpty ? "" : JapaneseText.romaji(part.reading)
+                result += partCharacters.map {
+                    JapaneseText.containsKanji(String($0)) ? partRomaji : JapaneseText.romaji(String($0))
+                }
+            } else {
+                result += JapaneseText.romajiPerKana(partCharacters)
+            }
+        }
+        // Parts should always rebuild the word; fall back to per-kana romaji if they don't.
+        return result.count == characters.count ? result : JapaneseText.romajiPerKana(characters)
+    }
+}
+
+nonisolated extension JapaneseText {
+    private static let smallYouon: Set<Character> = ["ゃ", "ゅ", "ょ", "ぁ", "ぃ", "ぅ", "ぇ", "ぉ", "ャ", "ュ", "ョ", "ァ", "ィ", "ゥ", "ェ", "ォ"]
+    private static let sokuon: Set<Character> = ["っ", "ッ"]
+
+    /// Hepburn-style romaji for kana, e.g. がっこう → gakkō.
+    static func romaji(_ kana: String) -> String {
+        let latin = hiragana(kana).applyingTransform(.toLatin, reverse: false) ?? kana
+        return latin.lowercased()
+    }
+
+    static func romajiPerKana(_ characters: [Character]) -> [String] {
+        var result: [String] = []
+        var index = 0
+        while index < characters.count {
+            let character = characters[index]
+            if index + 1 < characters.count, smallYouon.contains(characters[index + 1]) {
+                result += [romaji(String(character) + String(characters[index + 1])), ""]
+                index += 2
+                continue
+            }
+            if sokuon.contains(character) {
+                let next = index + 1 < characters.count ? romaji(String(characters[index + 1])) : ""
+                result.append(next.first.map { $0.isLetter ? String($0) : "" } ?? "")
+            } else if character == "ー" {
+                result.append("(long)")
+            } else if isKana(String(character)) {
+                result.append(romaji(String(character)))
+            } else {
+                result.append("")
+            }
+            index += 1
+        }
+        return result
+    }
+}

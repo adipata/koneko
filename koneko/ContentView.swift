@@ -202,7 +202,7 @@ struct ContentView: View {
                 description: Text(message)
             )
         case .ready:
-            WordStrokesView(word: word, library: library, speaksOnTap: settings.speakAutomatically) { character, stars in
+            WordStrokesView(word: word, library: library, speaksOnTap: settings.speakAutomatically, showRomaji: settings.showRomaji) { character, stars in
                 history.recordStars(stars, for: character, in: original)
             }
             .id(word.id)
