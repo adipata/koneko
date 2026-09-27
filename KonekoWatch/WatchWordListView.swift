@@ -1,3 +1,6 @@
+#if os(watchOS)
+// Watch app only. If this folder is accidentally added to the iPhone/iPad/Mac target,
+// this file compiles to nothing instead of breaking the build.
 import Combine
 import SwiftUI
 
@@ -135,3 +138,4 @@ struct WatchWordPage: Hashable {
         hasher.combine(entries.map(\.id))
     }
 }
+#endif
