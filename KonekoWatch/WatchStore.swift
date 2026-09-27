@@ -1,6 +1,3 @@
-#if os(watchOS)
-// Watch app only. If this folder is accidentally added to the iPhone/iPad/Mac target,
-// this file compiles to nothing instead of breaking the build.
 import Foundation
 import Observation
 
@@ -50,4 +47,3 @@ final class WatchStore {
         reload()
     }
 }
-#endif

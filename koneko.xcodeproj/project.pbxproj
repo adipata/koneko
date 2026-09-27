@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		405FAA0B3069655500B21263 /* KonekoWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 405FAA013069655500B21263 /* KonekoWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		405FAA0B3069655500B21263 /* KonekoWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 405FAA013069655500B21263 /* KonekoWatch Watch App.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -110,7 +110,6 @@
 			fileSystemSynchronizedGroups = (
 				000000000000000000000010 /* koneko */,
 				000000000000000000000011 /* Shared */,
-				405FAA143069661600B21263 /* KonekoWatch */,
 			);
 			name = koneko;
 			productName = MyApp;
@@ -203,6 +202,7 @@
 /* Begin PBXTargetDependency section */
 		405FAA0A3069655500B21263 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilter = ios;
 			target = 405FAA003069655500B21263 /* KonekoWatch Watch App */;
 			targetProxy = 405FAA093069655500B21263 /* PBXContainerItemProxy */;
 		};
@@ -446,7 +446,7 @@
 				DEVELOPMENT_TEAM = X3AS75R249;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = KonekoWatch;
+				INFOPLIST_KEY_CFBundleDisplayName = Koneko;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = lu.pata.koneko;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -465,7 +465,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.6;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
@@ -480,7 +480,7 @@
 				DEVELOPMENT_TEAM = X3AS75R249;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = KonekoWatch;
+				INFOPLIST_KEY_CFBundleDisplayName = Koneko;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = lu.pata.koneko;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -500,7 +500,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 26.6;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};

@@ -32,7 +32,7 @@ Both must use the same Apple Account and the same key-value store.
      **Create folders** (not groups), and tick only the **KonekoWatch Watch App** target.
    - Select the `Shared` folder in the navigator → **File inspector** (right panel) →
      **Target Membership**: tick **KonekoWatch Watch App** as well (keep **koneko** ticked).
-5. Watch target → **General** → **Minimum Deployments**: **watchOS 26.0**.
+5. Watch target → **General** → **Minimum Deployments**: **watchOS 26.0**. Make sure the `KonekoWatch` folder is **not** a member of the **koneko** target (only of the watch target).
 6. Watch target → **Build Settings**: make sure **Swift Language Version** and
    **Default Actor Isolation** match the main app (Swift 5, MainActor), so the shared code
    compiles the same way.

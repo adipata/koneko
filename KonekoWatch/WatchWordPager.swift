@@ -1,6 +1,3 @@
-#if os(watchOS)
-// Watch app only. If this folder is accidentally added to the iPhone/iPad/Mac target,
-// this file compiles to nothing instead of breaking the build.
 import SwiftUI
 
 /// One word per page; turn the Digital Crown or swipe up/down for the next word.
@@ -68,4 +65,3 @@ struct WatchWordDetailView: View {
         }
     }
 }
-#endif
