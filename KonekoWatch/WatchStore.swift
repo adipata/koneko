@@ -36,14 +36,20 @@ final class WatchStore {
         guard let compressed = NSUbiquitousKeyValueStore.default.data(forKey: CloudSync.key),
               let latest = CloudSync.decode(compressed)
         else { return }
-        if let current = snapshot, current.updatedAt > latest.updatedAt { return }
         snapshot = latest
         try? compressed.write(to: cacheURL, options: .atomic)
     }
 
-    /// Asks iCloud for news, then reloads.
-    func refresh() {
+    private(set) var isRefreshing = false
+
+    /// Asks iCloud for news, then reloads. iCloud may deliver the update a moment later
+    /// (it then also arrives through the change notification), so look again after a pause.
+    func refresh() async {
+        isRefreshing = true
         NSUbiquitousKeyValueStore.default.synchronize()
         reload()
+        try? await Task.sleep(for: .seconds(2))
+        reload()
+        isRefreshing = false
     }
 }

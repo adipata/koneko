@@ -159,6 +159,11 @@ struct SettingsView: View {
                         .onChange(of: settings.syncToWatch) { _, isOn in
                             if !isOn { watchSync.stopSharing() }
                         }
+                    if settings.syncToWatch {
+                        Button("Sync now", systemImage: "arrow.triangle.2.circlepath.icloud") {
+                            watchSync.update(history: history, settings: settings)
+                        }
+                    }
                     if settings.syncToWatch, let status = watchSync.status {
                         Label(status, systemImage: watchSync.isError ? "exclamationmark.triangle" : "checkmark.icloud")
                             .foregroundStyle(watchSync.isError ? Color.red : Color.secondary)
@@ -166,7 +171,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Apple Watch")
                 } footer: {
-                    Text("Shares her words through iCloud with the Koneko app on an Apple Watch signed in to the same Apple Account. The watch shows them read-only.")
+                    Text("Shares her words through iCloud with the Koneko app on an Apple Watch signed in to the same Apple Account. The watch shows them read-only. Turn this on on one device only (e.g. her iPad): each device sends its own word list, and the last one to sync wins.")
                 }
 
                 Section {

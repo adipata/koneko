@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Publishes "My words" (and how words are written) to iCloud for the Apple Watch app.
 @Observable
@@ -14,7 +17,8 @@ final class WatchSyncController {
             writingStyle: settings.writingStyle.rawValue,
             kanjiLevel: settings.kanjiLevel,
             showRomaji: settings.showRomaji,
-            showFurigana: settings.showFurigana
+            showFurigana: settings.showFurigana,
+            source: Self.deviceKind
         )
         do {
             let bytes = try CloudSync.publish(snapshot)
@@ -25,6 +29,14 @@ final class WatchSyncController {
             status = error.localizedDescription
             isError = true
         }
+    }
+
+    private static var deviceKind: String {
+        #if os(macOS)
+        "Mac"
+        #else
+        UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        #endif
     }
 
     func stopSharing() {

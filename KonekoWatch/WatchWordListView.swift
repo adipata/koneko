@@ -4,6 +4,7 @@ import SwiftUI
 /// Main screen: pinned words, folders and all words.
 struct WatchWordListView: View {
     let store: WatchStore
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack {
@@ -36,10 +37,26 @@ struct WatchWordListView: View {
                         Section("All words") {
                             rows(store.entries)
                         }
+                        Section {
+                            refreshButton
+                        } footer: {
+                            if let snapshot = store.snapshot {
+                                Text("Updated \(snapshot.updatedAt.formatted(date: .abbreviated, time: .shortened))\(snapshot.source.map { " from \($0)" } ?? "")")
+                            }
+                        }
                     }
+                    .refreshable { await store.refresh() }
                 }
             }
             .navigationTitle("Koneko")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Refresh", systemImage: "arrow.clockwise") {
+                        Task { await store.refresh() }
+                    }
+                    .disabled(store.isRefreshing)
+                }
+            }
             .navigationDestination(for: WatchWordPage.self) { page in
                 WatchWordPager(store: store, entries: page.entries, selection: page.startID)
             }
@@ -47,7 +64,23 @@ struct WatchWordListView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSUbiquitousKeyValueStore.didChangeExternallyNotification)) { _ in
             store.reload()
         }
-        .task { store.refresh() }
+        .task { await store.refresh() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await store.refresh() } }
+        }
+    }
+
+    private var refreshButton: some View {
+        Button {
+            Task { await store.refresh() }
+        } label: {
+            if store.isRefreshing {
+                ProgressView()
+            } else {
+                Label("Refresh", systemImage: "arrow.clockwise")
+            }
+        }
+        .disabled(store.isRefreshing)
     }
 
     @ViewBuilder
@@ -69,7 +102,7 @@ struct WatchWordListView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                Button("Refresh", systemImage: "arrow.clockwise") { store.refresh() }
+                refreshButton
             }
             .padding(.horizontal, 4)
         }

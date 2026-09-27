@@ -8,6 +8,8 @@ nonisolated struct WatchSnapshot: Codable, Sendable {
     var showRomaji: Bool
     var showFurigana: Bool
     var updatedAt = Date.now
+    /// Which device published it ("iPhone", "iPad", "Mac"), shown on the watch.
+    var source: String?
 
     var style: WritingStyle { WritingStyle(rawValue: writingStyle) ?? .natural }
 
