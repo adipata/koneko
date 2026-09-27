@@ -53,7 +53,7 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showSettings) {
-                SettingsView(settings: settings, translator: translator)
+                SettingsView(settings: settings, translator: translator, history: history)
             }
         }
         .task { await library.load() }

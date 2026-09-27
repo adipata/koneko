@@ -259,7 +259,7 @@
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Koneko listens to the word you say so it can show you how to write it in Japanese.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Koneko turns the word you say into text to find it in Japanese.";
@@ -305,7 +305,7 @@
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Koneko listens to the word you say so it can show you how to write it in Japanese.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Koneko turns the word you say into text to find it in Japanese.";

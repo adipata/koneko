@@ -1,8 +1,10 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Bindable var settings: AppSettings
     let translator: Translator
+    let history: HistoryStore
 
     @Environment(\.dismiss) private var dismiss
     @State private var apiKey = Keychain.apiKey ?? ""
@@ -11,6 +13,11 @@ struct SettingsView: View {
     @State private var customModel = ""
     @State private var showCredits = false
     @State private var confirmClear = false
+    @State private var confirmDeleteWords = false
+    @State private var exportDocument: DictionaryDocument?
+    @State private var showImporter = false
+    @State private var pendingImport: Data?
+    @State private var dictionaryMessage: String?
     private let pronouncer = Pronouncer.shared
 
     private var voiceDownloadHint: String {
@@ -118,12 +125,32 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Button("Forget saved words (\(translator.cachedWordCount))", role: .destructive) {
+                    Button("Forget saved translations (\(translator.cachedWordCount))", role: .destructive) {
                         confirmClear = true
                     }
                     .disabled(translator.cachedWordCount == 0)
                 } footer: {
-                    Text("Words already looked up are saved on this device and work offline.")
+                    Text("Translations already looked up are saved on this device and work offline. This doesn't change “My words”.")
+                }
+
+                Section {
+                    LabeledContent("Words", value: "\(history.entries.count)")
+                    LabeledContent("Folders", value: "\(history.folders.count)")
+                    Button("Export my words…", systemImage: "square.and.arrow.up") { exportWords() }
+                        .disabled(history.entries.isEmpty)
+                    Button("Import words…", systemImage: "square.and.arrow.down") { showImporter = true }
+                    Button("Delete all my words…", systemImage: "trash", role: .destructive) {
+                        confirmDeleteWords = true
+                    }
+                    .disabled(history.entries.isEmpty && history.folders.isEmpty)
+                    if let dictionaryMessage {
+                        Text(dictionaryMessage)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("My words")
+                } footer: {
+                    Text("Export saves her words, folders, pins and stars as a JSON file, e.g. to keep a backup or move them to another iPad or Mac.")
                 }
 
                 Section {
@@ -143,8 +170,44 @@ struct SettingsView: View {
             #if os(macOS)
             .frame(minWidth: 520, idealWidth: 560, minHeight: 620, idealHeight: 700)
             #endif
-            .confirmationDialog("Forget all saved words?", isPresented: $confirmClear) {
-                Button("Forget saved words", role: .destructive) { translator.clearCache() }
+            .confirmationDialog("Forget all saved translations?", isPresented: $confirmClear) {
+                Button("Forget saved translations", role: .destructive) { translator.clearCache() }
+            }
+            .confirmationDialog(
+                "Delete all \(history.entries.count) words and \(history.folders.count) folders?",
+                isPresented: $confirmDeleteWords,
+                titleVisibility: .visible
+            ) {
+                Button("Delete everything", role: .destructive) {
+                    history.removeAll()
+                    dictionaryMessage = "All words were deleted."
+                }
+            } message: {
+                Text("This can't be undone. Tip: export your words first to keep a backup.")
+            }
+            .fileExporter(
+                isPresented: Binding(get: { exportDocument != nil }, set: { if !$0 { exportDocument = nil } }),
+                document: exportDocument,
+                contentType: .json,
+                defaultFilename: "Koneko words \(Date.now.formatted(.iso8601.year().month().day()))"
+            ) { result in
+                switch result {
+                case .success: dictionaryMessage = "Words exported."
+                case .failure(let error): dictionaryMessage = "Export failed: \(error.localizedDescription)"
+                }
+            }
+            .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
+                readImport(result)
+            }
+            .confirmationDialog(
+                "Import words",
+                isPresented: Binding(get: { pendingImport != nil }, set: { if !$0 { pendingImport = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Add to my words") { finishImport(replacing: false) }
+                Button("Replace my words", role: .destructive) { finishImport(replacing: true) }
+            } message: {
+                Text("Add the imported words to hers, or replace all her words with the file's?")
             }
         }
     }
@@ -167,6 +230,42 @@ struct SettingsView: View {
         } else {
             Label("Not saved yet", systemImage: "pencil")
                 .foregroundStyle(.orange)
+        }
+    }
+
+    private func exportWords() {
+        do {
+            exportDocument = DictionaryDocument(data: try history.exportData())
+        } catch {
+            dictionaryMessage = "Export failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func readImport(_ result: Result<URL, any Error>) {
+        switch result {
+        case .success(let url):
+            let access = url.startAccessingSecurityScopedResource()
+            defer { if access { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let data = try Data(contentsOf: url)
+                _ = try DictionaryFile.decode(data) // check it's a Koneko file before asking
+                pendingImport = data
+            } catch {
+                dictionaryMessage = "This file isn't a Koneko word list."
+            }
+        case .failure(let error):
+            dictionaryMessage = "Import failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func finishImport(replacing: Bool) {
+        guard let data = pendingImport else { return }
+        pendingImport = nil
+        do {
+            let count = try history.importData(data, replacing: replacing)
+            dictionaryMessage = replacing ? "Imported \(count) words." : "Added \(count) new words."
+        } catch {
+            dictionaryMessage = "Import failed: \(error.localizedDescription)"
         }
     }
 

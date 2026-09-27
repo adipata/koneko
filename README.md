@@ -20,6 +20,8 @@ each character being written stroke by stroke.
 - **Phase 5 (done):** writing styles (as adults write / only kanji up to her school grade,
   with the rest in hiragana / all hiragana / all katakana), furigana toggle, "My words" history
   with stars earned in Practice, handwriting-style font (Klee One).
+- **My words:** pin words, sort them into folders, delete single words; export/import the
+  whole list (words, folders, pins, stars) as JSON from Settings.
 
 ## Setup
 
