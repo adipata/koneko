@@ -5,6 +5,13 @@ struct WordCardView: View {
     let word: WordCandidate
     let showRomaji: Bool
     var showFurigana = true
+    /// The word as adults write it (before the writing style was applied), for "Copy" options.
+    var original: WordCandidate?
+
+    @State private var copiedText: String?
+    @State private var copiedResetTask: Task<Void, Never>?
+
+    private var natural: WordCandidate { original ?? word }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -12,6 +19,7 @@ struct WordCardView: View {
                 Text(word.emoji).font(.system(size: 56))
             }
             FuriganaText(parts: word.parts, showFurigana: showFurigana)
+                .contextMenu { copyOptions }
             HStack(spacing: 16) {
                 Button("Say it", systemImage: "speaker.wave.2.fill") {
                     Pronouncer.shared.speak(word.spokenText)
@@ -19,6 +27,10 @@ struct WordCardView: View {
                 Button("Say it slowly", systemImage: "tortoise.fill") {
                     Pronouncer.shared.speak(word.spokenText, slow: true)
                 }
+                Button("Copy", systemImage: "doc.on.doc") {
+                    copy(word.japanese)
+                }
+                .contextMenu { copyOptions }
             }
             .labelStyle(.iconOnly)
             .font(.title2)
@@ -38,6 +50,44 @@ struct WordCardView: View {
         .padding()
         .frame(maxWidth: .infinity)
         .background(RoundedRectangle(cornerRadius: 20).fill(Color.orange.opacity(0.08)))
+        .overlay(alignment: .top) {
+            if let copiedText {
+                Label("Copied “\(copiedText)”", systemImage: "checkmark.circle.fill")
+                    .font(.callout.weight(.semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(.regularMaterial))
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(duration: 0.3), value: copiedText)
+    }
+
+    /// Long-press (iPad/iPhone) or right-click (Mac) menu with the different ways to copy.
+    @ViewBuilder
+    private var copyOptions: some View {
+        Button("Copy “\(word.japanese)”", systemImage: "doc.on.doc") { copy(word.japanese) }
+        if natural.japanese != word.japanese {
+            Button("Copy as adults write it: \(natural.japanese)", systemImage: "doc.on.doc") { copy(natural.japanese) }
+        }
+        if !word.reading.isEmpty, word.reading != word.japanese {
+            Button("Copy in hiragana: \(word.reading)", systemImage: "doc.on.doc") { copy(word.reading) }
+        }
+        if !word.romaji.isEmpty {
+            Button("Copy romaji: \(word.romaji)", systemImage: "doc.on.doc") { copy(word.romaji) }
+        }
+    }
+
+    private func copy(_ text: String) {
+        Clipboard.copy(text)
+        copiedText = text
+        copiedResetTask?.cancel()
+        copiedResetTask = Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled else { return }
+            copiedText = nil
+        }
     }
 }
 

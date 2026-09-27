@@ -31,7 +31,7 @@ struct ContentView: View {
                     statusSection
                     if let word = selectedWord {
                         let shown = settings.display(word)
-                        WordCardView(word: shown, showRomaji: settings.showRomaji, showFurigana: settings.showFurigana)
+                        WordCardView(word: shown, showRomaji: settings.showRomaji, showFurigana: settings.showFurigana, original: word)
                         strokesSection(for: shown, original: word)
                     }
                 }
