@@ -17,13 +17,6 @@ struct ContentView: View {
     @State private var showSettings = false
     @FocusState private var inputFocused: Bool
 
-    private var sampleWords: [String] {
-        switch settings.inputLanguage {
-        case .english: ["cat", "dog", "school", "apple", "rain", "thank you", "bat"]
-        case .japanese: ["ねこ", "猫", "がっこう", "はし", "ありがとう"]
-        }
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -133,16 +126,6 @@ struct ContentView: View {
                     .font(.title2)
                     .buttonStyle(.borderedProminent)
                     .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-
-            FlowLayout(spacing: 8, lineSpacing: 8, centered: false) {
-                ForEach(sampleWords, id: \.self) { word in
-                    Button(word) {
-                        input = word
-                        lookUp()
-                    }
-                    .buttonStyle(.bordered)
-                }
             }
         }
     }
