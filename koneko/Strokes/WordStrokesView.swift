@@ -44,14 +44,12 @@ struct WordStrokesView: View {
         } else {
             VStack(spacing: 20) {
                 let tiles = self.tiles
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(Array(tiles.enumerated()), id: \.offset) { index, tile in
-                            tileView(tile.character, romaji: tile.romaji, index: index)
-                        }
+                FlowLayout(spacing: 10, lineSpacing: 10) {
+                    ForEach(Array(tiles.enumerated()), id: \.offset) { index, tile in
+                        tileView(tile.character, romaji: tile.romaji, index: index)
                     }
-                    .padding(.vertical, 4)
                 }
+                .padding(.vertical, 4)
 
                 let index = min(selectedIndex, tiles.count - 1)
                 let character = tiles[index].character

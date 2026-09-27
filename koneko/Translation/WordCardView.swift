@@ -73,37 +73,35 @@ struct CandidatePicker: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Which one did you mean?")
                 .font(.headline)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(candidates) { candidate in
-                        let isSelected = candidate == selection
-                        Button {
-                            selection = candidate
-                        } label: {
-                            VStack(spacing: 4) {
-                                Text(candidate.emoji.isEmpty ? "❓" : candidate.emoji).font(.largeTitle)
-                                Text(candidate.japanese).font(.handwriting(size: 26))
-                                Text(candidate.meaning)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .frame(width: 130, height: 130)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(isSelected ? Color.orange.opacity(0.2) : Color.secondary.opacity(0.08))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .strokeBorder(isSelected ? Color.orange : Color.clear, lineWidth: 3)
-                            )
+            FlowLayout(spacing: 10, lineSpacing: 10) {
+                ForEach(candidates) { candidate in
+                    let isSelected = candidate == selection
+                    Button {
+                        selection = candidate
+                    } label: {
+                        VStack(spacing: 4) {
+                            Text(candidate.emoji.isEmpty ? "❓" : candidate.emoji).font(.largeTitle)
+                            Text(candidate.japanese).font(.handwriting(size: 26))
+                            Text(candidate.meaning)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.center)
                         }
-                        .buttonStyle(.plain)
+                        .frame(width: 130, height: 130)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(isSelected ? Color.orange.opacity(0.2) : Color.secondary.opacity(0.08))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .strokeBorder(isSelected ? Color.orange : Color.clear, lineWidth: 3)
+                        )
                     }
+                    .buttonStyle(.plain)
                 }
-                .padding(.vertical, 4)
             }
+            .padding(.vertical, 4)
         }
     }
 }

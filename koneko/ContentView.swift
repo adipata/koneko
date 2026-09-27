@@ -82,7 +82,7 @@ struct ContentView: View {
             .frame(maxWidth: .infinity)
 
             if !heardAlternatives.isEmpty {
-                HStack {
+                FlowLayout(spacing: 8, lineSpacing: 8) {
                     Text("Or did you say:")
                         .foregroundStyle(.secondary)
                     ForEach(heardAlternatives, id: \.self) { alternative in
@@ -114,15 +114,13 @@ struct ContentView: View {
                     .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
             }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack {
-                    ForEach(sampleWords, id: \.self) { word in
-                        Button(word) {
-                            input = word
-                            lookUp()
-                        }
-                        .buttonStyle(.bordered)
+            FlowLayout(spacing: 8, lineSpacing: 8, centered: false) {
+                ForEach(sampleWords, id: \.self) { word in
+                    Button(word) {
+                        input = word
+                        lookUp()
                     }
+                    .buttonStyle(.bordered)
                 }
             }
         }
