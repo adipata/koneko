@@ -91,29 +91,6 @@ struct WordCardView: View {
     }
 }
 
-/// Shows each part of a word with its reading above it when it contains kanji.
-struct FuriganaText: View {
-    let parts: [WordCandidate.Part]
-    var showFurigana = true
-
-    var body: some View {
-        HStack(alignment: .bottom, spacing: 2) {
-            ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
-                VStack(spacing: 0) {
-                    let needsReading = showFurigana && JapaneseText.containsKanji(part.text) && !part.reading.isEmpty
-                    Text(needsReading ? part.reading : " ")
-                        .font(.handwriting(size: 18))
-                        .foregroundStyle(.orange)
-                    Text(part.text)
-                        .font(.handwriting(size: 60))
-                }
-            }
-        }
-        .lineLimit(1)
-        .minimumScaleFactor(0.4)
-    }
-}
-
 /// "Did you mean…?" choices when there's more than one possible word.
 struct CandidatePicker: View {
     let candidates: [WordCandidate]

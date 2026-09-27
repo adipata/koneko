@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var settings = AppSettings()
     @State private var speech = SpeechInput()
     @State private var history = HistoryStore()
+    @State private var watchSync = WatchSyncController()
     @State private var showHistory = false
     @State private var lastLookupWasJapanese = false
 
@@ -53,10 +54,13 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showSettings) {
-                SettingsView(settings: settings, translator: translator, history: history)
+                SettingsView(settings: settings, translator: translator, history: history, watchSync: watchSync)
             }
         }
         .task { await library.load() }
+        .onChange(of: watchSyncKey, initial: true) {
+            watchSync.update(history: history, settings: settings)
+        }
         .onChange(of: selectedWord) {
             guard let word = selectedWord else { return }
             history.record(word)
@@ -147,6 +151,14 @@ struct ContentView: View {
     private func directWordIfJapanese() -> WordCandidate? {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         return lastLookupWasJapanese && JapaneseText.isJapanese(text) ? .direct(text) : nil
+    }
+
+    /// Changes whenever something the watch shows changes.
+    private var watchSyncKey: String {
+        [
+            "\(history.revision)", "\(settings.syncToWatch)", settings.writingStyle.rawValue,
+            "\(settings.kanjiLevel)", "\(settings.showRomaji)", "\(settings.showFurigana)",
+        ].joined(separator: "|")
     }
 
     private var languageBinding: Binding<InputLanguage> {

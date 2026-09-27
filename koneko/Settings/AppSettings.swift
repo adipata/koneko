@@ -21,6 +21,7 @@ final class AppSettings {
         static let inputLanguage = "inputLanguage"
         static let showRomaji = "showRomaji"
         static let speakAutomatically = "speakAutomatically"
+        static let syncToWatch = "syncToWatch"
         static let writingStyle = "writingStyle"
         static let kanjiLevel = "kanjiLevel"
         static let showFurigana = "showFurigana"
@@ -42,6 +43,11 @@ final class AppSettings {
 
     var speakAutomatically: Bool {
         didSet { defaults.set(speakAutomatically, forKey: Keys.speakAutomatically) }
+    }
+
+    /// Share My words with the Apple Watch app through iCloud.
+    var syncToWatch: Bool {
+        didSet { defaults.set(syncToWatch, forKey: Keys.syncToWatch) }
     }
 
     var writingStyle: WritingStyle {
@@ -67,6 +73,7 @@ final class AppSettings {
         inputLanguage = defaults.string(forKey: Keys.inputLanguage).flatMap { InputLanguage(rawValue: $0) } ?? .english
         showRomaji = defaults.object(forKey: Keys.showRomaji) as? Bool ?? true
         speakAutomatically = defaults.object(forKey: Keys.speakAutomatically) as? Bool ?? true
+        syncToWatch = defaults.bool(forKey: Keys.syncToWatch)
         writingStyle = defaults.string(forKey: Keys.writingStyle).flatMap { WritingStyle(rawValue: $0) } ?? .schoolLevel
         kanjiLevel = defaults.object(forKey: Keys.kanjiLevel) as? Int ?? 1
         showFurigana = defaults.object(forKey: Keys.showFurigana) as? Bool ?? true

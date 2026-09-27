@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Bindable var settings: AppSettings
     let translator: Translator
     let history: HistoryStore
+    let watchSync: WatchSyncController
 
     @Environment(\.dismiss) private var dismiss
     @State private var apiKey = Keychain.apiKey ?? ""
@@ -151,6 +152,21 @@ struct SettingsView: View {
                     Text("My words")
                 } footer: {
                     Text("Export saves her words, folders, pins and stars as a JSON file, e.g. to keep a backup or move them to another iPad or Mac.")
+                }
+
+                Section {
+                    Toggle("Sync My words to Apple Watch", isOn: $settings.syncToWatch)
+                        .onChange(of: settings.syncToWatch) { _, isOn in
+                            if !isOn { watchSync.stopSharing() }
+                        }
+                    if settings.syncToWatch, let status = watchSync.status {
+                        Label(status, systemImage: watchSync.isError ? "exclamationmark.triangle" : "checkmark.icloud")
+                            .foregroundStyle(watchSync.isError ? Color.red : Color.secondary)
+                    }
+                } header: {
+                    Text("Apple Watch")
+                } footer: {
+                    Text("Shares her words through iCloud with the Koneko app on an Apple Watch signed in to the same Apple Account. The watch shows them read-only.")
                 }
 
                 Section {

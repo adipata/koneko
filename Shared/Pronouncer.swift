@@ -1,4 +1,5 @@
 import AVFoundation
+import Observation
 
 /// Says Japanese words aloud with the best Japanese voice installed on the device.
 @Observable
@@ -37,7 +38,7 @@ final class Pronouncer {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
-        #if os(iOS)
+        #if os(iOS) || os(watchOS)
         // Hold-to-talk switches the session to recording; switch back to playback.
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.playback, mode: .spokenAudio, options: .duckOthers)

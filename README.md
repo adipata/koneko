@@ -20,6 +20,8 @@ each character being written stroke by stroke.
 - **Phase 5 (done):** writing styles (as adults write / only kanji up to her school grade,
   with the rest in hiragana / all hiragana / all katakana), furigana toggle, "My words" history
   with stars earned in Practice, handwriting-style font (Klee One).
+- **Apple Watch (in progress):** My words sync through iCloud key-value storage to a
+  watchOS app (`KonekoWatch/`, shared code in `Shared/`). Setup: see `docs/AppleWatch.md`.
 - **My words:** pin words, sort them into folders, delete single words; export/import the
   whole list (words, folders, pins, stars) as JSON from Settings.
 
@@ -30,7 +32,7 @@ Keychain. The model can be changed there too (default: `google/gemini-3.7-flash`
 
 ## Data and fonts
 
-- `koneko/Resources/kanji_grades.json`: school grade of each jōyō kanji, from KANJIDIC2
+- `Shared/Resources/kanji_grades.json`: school grade of each jōyō kanji, from KANJIDIC2
   (© EDRDG, CC BY-SA 4.0) via [kanji-data](https://github.com/davidluzgouveia/kanji-data).
   Regenerate with `python3 Tools/build_kanji_grades.py`.
 - `koneko/Resources/Fonts/KleeOne-SemiBold.ttf`: [Klee One](https://github.com/fontworks-fonts/Klee)

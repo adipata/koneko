@@ -11,6 +11,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		000000000000000000000011 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		000000000000000000000010 /* koneko */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = koneko;
@@ -31,6 +36,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000010 /* koneko */,
+				000000000000000000000011 /* Shared */,
 				000000000000000000000020 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -58,6 +64,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				000000000000000000000010 /* koneko */,
+				000000000000000000000011 /* Shared */,
 			);
 			name = koneko;
 			productName = MyApp;

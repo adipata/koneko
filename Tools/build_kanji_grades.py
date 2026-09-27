@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build koneko/Resources/kanji_grades.json: the school grade in which each jōyō kanji is taught.
+"""Build Shared/Resources/kanji_grades.json: the school grade in which each jōyō kanji is taught.
 
     { "一": 1, ..., "茨": 4, ..., "亜": 7 }
     1-6 = elementary school grade (kyōiku kanji), 7 = secondary school (other jōyō kanji)
@@ -16,7 +16,7 @@ import urllib.request
 from pathlib import Path
 
 URL = "https://raw.githubusercontent.com/davidluzgouveia/kanji-data/master/kanji.json"
-OUT = Path(__file__).resolve().parent.parent / "koneko" / "Resources" / "kanji_grades.json"
+OUT = Path(__file__).resolve().parent.parent / "Shared" / "Resources" / "kanji_grades.json"
 PREFECTURE_KANJI_2020 = "茨媛岡潟岐熊香佐埼崎滋鹿縄井沖栃奈梨阪阜"
 
 
