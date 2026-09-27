@@ -33,18 +33,23 @@ nonisolated final class SpeechEngine: @unchecked Sendable {
     nonisolated enum StartError: LocalizedError {
         case recognizerUnavailable(String)
         case noMicrophone
+        case audioBusy(String)
 
         var errorDescription: String? {
             switch self {
             case .recognizerUnavailable(let language):
                 "Speech recognition for \(language) isn't available on this device right now."
             case .noMicrophone:
-                "No microphone was found."
+                "The microphone isn't available right now. If another app is using it (a call, a video, a recording), close it and try again."
+            case .audioBusy(let detail):
+                "Another app is using the microphone or sound right now. Close it or pause it, then try again. (\(detail))"
             }
         }
     }
 
-    private let audioEngine = AVAudioEngine()
+    /// Recreated for every recording: after another app used the audio hardware (or the
+    /// microphone changed, e.g. AirPods connecting), an old engine can report a 0 Hz input.
+    private var audioEngine = AVAudioEngine()
     private var recognizer: SFSpeechRecognizer?
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
@@ -80,7 +85,7 @@ nonisolated final class SpeechEngine: @unchecked Sendable {
     }
 
     /// Starts the microphone and live recognition.
-    func start(locale: Locale) throws -> AsyncStream<Update> {
+    func start(locale: Locale) async throws -> AsyncStream<Update> {
         cancel()
         recordingLock.withLock { recording = [] }
 
@@ -88,8 +93,13 @@ nonisolated final class SpeechEngine: @unchecked Sendable {
 
         #if os(iOS)
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .measurement, options: .duckOthers)
-        try session.setActive(true, options: .notifyOthersOnDeactivation)
+        do {
+            try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+        } catch {
+            // e.g. a phone or FaceTime call has priority over us.
+            throw StartError.audioBusy((error as NSError).localizedDescription)
+        }
         #endif
 
         let request = SFSpeechAudioBufferRecognitionRequest()
@@ -100,9 +110,17 @@ nonisolated final class SpeechEngine: @unchecked Sendable {
         }
         self.request = request
 
+        // A fresh engine picks up the current microphone. Right after another app released the
+        // audio hardware the input can briefly report no format, so give it a few tries.
+        var format = AVAudioFormat()
+        for attempt in 0..<4 {
+            audioEngine = AVAudioEngine()
+            format = audioEngine.inputNode.outputFormat(forBus: 0)
+            if format.sampleRate > 0, format.channelCount > 0 { break }
+            if attempt == 3 { throw StartError.noMicrophone }
+            try await Task.sleep(for: .milliseconds(250))
+        }
         let input = audioEngine.inputNode
-        let format = input.outputFormat(forBus: 0)
-        guard format.sampleRate > 0, format.channelCount > 0 else { throw StartError.noMicrophone }
 
         let (stream, continuation) = AsyncStream<Update>.makeStream()
         self.continuation = continuation
@@ -115,7 +133,14 @@ nonisolated final class SpeechEngine: @unchecked Sendable {
             continuation.yield(.level(Self.level(of: buffer)))
         }
         audioEngine.prepare()
-        try audioEngine.start()
+        do {
+            try audioEngine.start()
+        } catch {
+            input.removeTap(onBus: 0)
+            continuation.finish()
+            self.continuation = nil
+            throw StartError.audioBusy((error as NSError).localizedDescription)
+        }
 
         task = recognizer.recognitionTask(with: request, resultHandler: Self.resultHandler(continuation))
         return stream

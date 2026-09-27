@@ -55,7 +55,7 @@ final class SpeechInput {
             guard status == .listening, !Task.isCancelled else { return }
             do {
                 locale = Self.locale(for: language)
-                let updates = try engine.start(locale: locale)
+                let updates = try await engine.start(locale: locale)
                 listenTask = Task { await consume(updates) }
             } catch {
                 fail(error.localizedDescription)
