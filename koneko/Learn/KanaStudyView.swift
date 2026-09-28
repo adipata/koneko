@@ -55,7 +55,6 @@ struct KanaStudyView: View {
             }
         }
         .frame(maxWidth: 360)
-        .keyboardDoneButton { fieldFocused = false }
     }
 
     /// Runs when she presses Return/Search: opens the character, then clears the box and

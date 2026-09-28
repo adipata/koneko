@@ -116,7 +116,6 @@ struct ContentView: View {
                     .focused($inputFocused)
                     .submitLabel(.search)
                     .onSubmit(lookUp)
-                    .keyboardDoneButton { inputFocused = false }
                     .id(fieldResetID)
                     .overlay(alignment: .trailing) {
                         // Also shown while focused: while the Japanese keyboard is still

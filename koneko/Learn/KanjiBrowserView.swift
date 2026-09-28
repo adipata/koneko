@@ -86,7 +86,6 @@ struct KanjiBrowserView: View {
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
         .frame(maxWidth: 420)
-        .keyboardDoneButton { searchFocused = false }
     }
 
     private var gradePicker: some View {
