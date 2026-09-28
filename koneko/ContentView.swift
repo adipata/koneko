@@ -36,6 +36,7 @@ struct ContentView: View {
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity)
             }
+            .scrollDismissesKeyboard(.immediately)
             .navigationTitle("Koneko 🐱")
         }
         .onChange(of: model.wordToOpen, initial: true) {
@@ -115,6 +116,7 @@ struct ContentView: View {
                     .focused($inputFocused)
                     .submitLabel(.search)
                     .onSubmit(lookUp)
+                    .keyboardDoneButton { inputFocused = false }
                     .id(fieldResetID)
                     .overlay(alignment: .trailing) {
                         // Also shown while focused: while the Japanese keyboard is still
