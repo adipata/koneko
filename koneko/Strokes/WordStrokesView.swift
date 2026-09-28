@@ -7,6 +7,9 @@ struct WordStrokesView: View {
     /// Say a character's sound when its tile is tapped.
     var speaksOnTap = true
     var showRomaji = true
+    /// Show the character tiles and the selected-character header. Turn off when the parent
+    /// already shows the (single) character itself.
+    var showsTiles = true
     /// Called with the stars (1–3) when she finishes writing a character in Practice.
     var onPracticeFinished: ((Character, Int) -> Void)?
 
@@ -44,16 +47,20 @@ struct WordStrokesView: View {
         } else {
             VStack(spacing: 20) {
                 let tiles = self.tiles
-                FlowLayout(spacing: 10, lineSpacing: 10) {
-                    ForEach(Array(tiles.enumerated()), id: \.offset) { index, tile in
-                        tileView(tile.character, romaji: tile.romaji, index: index)
+                if showsTiles {
+                    FlowLayout(spacing: 10, lineSpacing: 10) {
+                        ForEach(Array(tiles.enumerated()), id: \.offset) { index, tile in
+                            tileView(tile.character, romaji: tile.romaji, index: index)
+                        }
                     }
+                    .padding(.vertical, 4)
                 }
-                .padding(.vertical, 4)
 
                 let index = min(selectedIndex, tiles.count - 1)
                 let character = tiles[index].character
-                selectedHeader(character, romaji: tiles[index].romaji, wordIndex: tiles[index].wordIndex)
+                if showsTiles {
+                    selectedHeader(character, romaji: tiles[index].romaji, wordIndex: tiles[index].wordIndex)
+                }
 
                 if let data = library.strokes(for: character) {
                     Picker("Mode", selection: $mode) {

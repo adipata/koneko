@@ -12,7 +12,6 @@ struct HistoryView: View {
         case folder(UUID)
     }
 
-    @Environment(\.dismiss) private var dismiss
     @State private var filter = Filter.all
     @State private var searchText = ""
 
@@ -35,11 +34,6 @@ struct HistoryView: View {
             }
             .navigationTitle("My words")
             .searchable(text: $searchText, prompt: "Search in English")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
             .alert(renamingFolder == nil ? "New folder" : "Rename folder", isPresented: $showFolderNameAlert) {
                 TextField("e.g. 🐾 Animals", text: $folderName)
                 Button("Cancel", role: .cancel) { resetFolderEditing() }
@@ -60,9 +54,6 @@ struct HistoryView: View {
             } message: {
                 Text("The words stay in “All words”.")
             }
-            #if os(macOS)
-            .frame(minWidth: 520, minHeight: 580)
-            #endif
         }
     }
 
@@ -178,7 +169,6 @@ struct HistoryView: View {
         let word = style(entry.word)
         return Button {
             onSelect(entry.word)
-            dismiss()
         } label: {
             HStack(spacing: 14) {
                 Text(word.emoji.isEmpty ? "📝" : word.emoji)

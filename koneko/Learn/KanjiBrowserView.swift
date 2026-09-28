@@ -1,0 +1,282 @@
+import SwiftUI
+
+/// Kanji by school grade (like the "Kanji she knows" setting), with search.
+struct KanjiBrowserView: View {
+    let model: AppModel
+
+    @AppStorage("learnKanjiGrade") private var grade = 1
+    @State private var searchText = ""
+    @State private var selection: KanjiInfo?
+
+    private var library: KanjiLibrary { model.kanji }
+
+    private var isSearching: Bool {
+        !searchText.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private var shown: [KanjiInfo] {
+        isSearching ? library.search(searchText) : library.kanji(grade: grade)
+    }
+
+    var body: some View {
+        StudySplit(selection: $selection, placeholder: "Choose a kanji") {
+            VStack(alignment: .leading, spacing: 16) {
+                searchField
+                if !isSearching {
+                    gradePicker
+                }
+                let kanji = shown
+                Text(isSearching ? "\(kanji.count) found" : "\(grade == 7 ? "Secondary school" : "Grade \(grade)"): \(kanji.count) kanji")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                if kanji.isEmpty, isSearching {
+                    ContentUnavailableView.search(text: searchText)
+                }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 8)], spacing: 8) {
+                    ForEach(kanji) { info in
+                        tile(info)
+                    }
+                }
+            }
+        } detail: { info in
+            KanjiDetailView(model: model, info: info)
+        }
+    }
+
+    private var searchField: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Search: mountain, やま, yama or 山", text: $searchText)
+                .autocorrectionDisabled()
+            if isSearching {
+                Button("Clear", systemImage: "xmark.circle.fill") { searchText = "" }
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+        .frame(maxWidth: 420)
+    }
+
+    private var gradePicker: some View {
+        FlowLayout(spacing: 8, lineSpacing: 8, centered: false) {
+            ForEach(1...7, id: \.self) { level in
+                let isSelected = level == grade
+                Button {
+                    grade = level
+                } label: {
+                    Text(level == 7 ? "Secondary" : "Grade \(level)")
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(isSelected ? Color.orange.opacity(0.25) : Color.secondary.opacity(0.1)))
+                        .overlay(Capsule().strokeBorder(isSelected ? Color.orange : Color.clear, lineWidth: 2))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func tile(_ info: KanjiInfo) -> some View {
+        let isSelected = selection == info
+        let emoji = KanjiEmoji.map[info.character] ?? model.kanjiExplainer.explanations[info.character]?.emoji
+        return Button {
+            selection = info
+            Pronouncer.shared.speak(info.mainReading)
+        } label: {
+            VStack(spacing: 2) {
+                Text(info.character)
+                    .font(.handwriting(size: 34))
+                Text(info.shortMeaning)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(maxWidth: .infinity, minHeight: 78)
+            .overlay(alignment: .topTrailing) {
+                if let emoji {
+                    Text(emoji)
+                        .font(.system(size: 14))
+                        .padding(4)
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? Color.orange.opacity(0.25) : Color.secondary.opacity(0.08))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(isSelected ? Color.orange : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(info.character), \(info.shortMeaning)")
+    }
+}
+
+/// One kanji: meaning, readings, the AI explanation, and how to write it.
+struct KanjiDetailView: View {
+    let model: AppModel
+    let info: KanjiInfo
+
+    private var explainer: KanjiExplainer { model.kanjiExplainer }
+    private var explanation: KanjiExplanation? { explainer.explanations[info.character] }
+    private var emoji: String? { KanjiEmoji.map[info.character] ?? explanation?.emoji }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            header
+            readings
+            aiCard
+            strokes
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .task(id: info.character) {
+            await explainer.explain(info, model: model.settings.model)
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 18) {
+            Text(info.character)
+                .font(.handwriting(size: 88))
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    if let emoji { Text(emoji).font(.largeTitle) }
+                    Text(explanation?.meaning ?? info.shortMeaning)
+                        .font(.title2.weight(.semibold))
+                }
+                if info.meanings.count > 1 {
+                    Text(info.meanings.joined(separator: ", "))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                HStack(spacing: 8) {
+                    badge(info.grade == 7 ? "Secondary school" : "Grade \(info.grade)")
+                    badge("\(info.strokes) strokes")
+                }
+            }
+        }
+    }
+
+    private func badge(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.orange.opacity(0.15)))
+    }
+
+    private var readings: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !info.kun.isEmpty {
+                readingRow("Japanese reading", info.kun)
+            }
+            if !info.on.isEmpty {
+                readingRow("Chinese reading", info.on)
+            }
+        }
+    }
+
+    private func readingRow(_ title: String, _ readings: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            FlowLayout(spacing: 6, lineSpacing: 6, centered: false) {
+                ForEach(readings, id: \.self) { reading in
+                    let clean = KanjiInfo.clean(reading)
+                    Button {
+                        Pronouncer.shared.speak(clean)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "speaker.wave.2.fill").font(.caption)
+                            Text(clean).font(.handwriting(size: 18))
+                            Text(JapaneseText.romaji(clean)).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var aiCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Explanation", systemImage: "sparkles")
+                .font(.headline)
+            if let explanation {
+                Text(explanation.explanation)
+                if !explanation.memoryTip.isEmpty {
+                    Label(explanation.memoryTip, systemImage: "lightbulb")
+                        .foregroundStyle(.orange)
+                }
+                if !explanation.examples.isEmpty {
+                    Text("Words with \(info.character)")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.top, 4)
+                    ForEach(explanation.examples, id: \.self) { example in
+                        Button {
+                            Pronouncer.shared.speak(example.reading)
+                        } label: {
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text(example.word).font(.handwriting(size: 22))
+                                Text(example.reading).foregroundStyle(.orange)
+                                Text("– \(example.meaning)").foregroundStyle(.secondary)
+                                Spacer(minLength: 0)
+                                Image(systemName: "speaker.wave.2").foregroundStyle(.secondary)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            } else if explainer.loading.contains(info.character) {
+                ProgressView("Asking for a nice explanation…")
+            } else if let error = explainer.errors[info.character] {
+                Text(error).foregroundStyle(.secondary)
+                Button("Try again") {
+                    Task { await explainer.explain(info, model: model.settings.model) }
+                }
+                .buttonStyle(.bordered)
+            } else if !explainer.hasAPIKey {
+                Text("Add an OpenRouter key in Settings to get a friendly explanation with example words.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.orange.opacity(0.08)))
+    }
+
+    @ViewBuilder
+    private var strokes: some View {
+        switch model.library.loadState {
+        case .ready:
+            WordStrokesView(
+                word: WordCandidate(
+                    japanese: info.character,
+                    reading: info.mainReading,
+                    romaji: JapaneseText.romaji(info.mainReading),
+                    meaning: info.shortMeaning,
+                    emoji: emoji ?? "",
+                    isLoanword: false,
+                    parts: [.init(text: info.character, reading: info.mainReading)]
+                ),
+                library: model.library,
+                speaksOnTap: false,
+                showRomaji: true,
+                showsTiles: false
+            )
+            .frame(maxWidth: .infinity)
+        case .loading:
+            ProgressView()
+        case .failed(let message):
+            Text(message).foregroundStyle(.secondary)
+        }
+    }
+}

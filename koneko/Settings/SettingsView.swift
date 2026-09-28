@@ -6,6 +6,8 @@ struct SettingsView: View {
     let translator: Translator
     let history: HistoryStore
     let watchSync: WatchSyncController
+    /// Shown as a tab/sidebar section (no Done button) rather than a sheet.
+    var isInTab = false
 
     @Environment(\.dismiss) private var dismiss
     @State private var apiKey = Keychain.apiKey ?? ""
@@ -181,16 +183,16 @@ struct SettingsView: View {
             .formStyle(.grouped)
             .navigationTitle("Settings")
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        if saveKey() { dismiss() }
+                if !isInTab {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") {
+                            if saveKey() { dismiss() }
+                        }
                     }
                 }
             }
+            .onDisappear { saveKey() }
             .sheet(isPresented: $showCredits) { CreditsView() }
-            #if os(macOS)
-            .frame(minWidth: 520, idealWidth: 560, minHeight: 620, idealHeight: 700)
-            #endif
             .confirmationDialog("Forget all saved translations?", isPresented: $confirmClear) {
                 Button("Forget saved translations", role: .destructive) { translator.clearCache() }
             }

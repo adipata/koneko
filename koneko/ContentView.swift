@@ -1,20 +1,21 @@
 import SwiftUI
 
+/// The Write section: say or type a word, see it in Japanese and learn to write it.
 struct ContentView: View {
-    @State private var library = StrokeLibrary()
-    @State private var translator = Translator()
-    @State private var settings = AppSettings()
-    @State private var speech = SpeechInput()
-    @State private var history = HistoryStore()
-    @State private var watchSync = WatchSyncController()
-    @State private var showHistory = false
+    let model: AppModel
+
+    private var library: StrokeLibrary { model.library }
+    private var translator: Translator { model.translator }
+    private var settings: AppSettings { model.settings }
+    private var speech: SpeechInput { model.speech }
+    private var history: HistoryStore { model.history }
+
     @State private var lastLookupWasJapanese = false
 
     @State private var input = ""
     @State private var selectedWord: WordCandidate?
     /// Other things speech recognition thought she might have said.
     @State private var heardAlternatives: [String] = []
-    @State private var showSettings = false
     @FocusState private var inputFocused: Bool
     /// Changing it recreates the text field (see `clearInput`).
     @State private var fieldResetID = 0
@@ -36,25 +37,15 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
             }
             .navigationTitle("Koneko 🐱")
-            .toolbar {
-                Button("My words", systemImage: "book") { showHistory = true }
-                Button("Settings", systemImage: "gearshape") { showSettings = true }
-            }
-            .sheet(isPresented: $showHistory) {
-                HistoryView(history: history, style: settings.display) { word in
-                    translator.reset()
-                    heardAlternatives = []
-                    input = ""
-                    selectedWord = word
-                }
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsView(settings: settings, translator: translator, history: history, watchSync: watchSync)
-            }
         }
-        .task { await library.load() }
-        .onChange(of: watchSyncKey, initial: true) {
-            watchSync.update(history: history, settings: settings)
+        .onChange(of: model.wordToOpen, initial: true) {
+            // A word chosen in My words.
+            guard let word = model.wordToOpen else { return }
+            model.wordToOpen = nil
+            translator.reset()
+            heardAlternatives = []
+            input = ""
+            selectedWord = word
         }
         .onChange(of: selectedWord) {
             guard let word = selectedWord else { return }
@@ -169,14 +160,6 @@ struct ContentView: View {
         return lastLookupWasJapanese && JapaneseText.isJapanese(text) ? .direct(text) : nil
     }
 
-    /// Changes whenever something the watch shows changes.
-    private var watchSyncKey: String {
-        [
-            "\(history.revision)", "\(settings.syncToWatch)", settings.writingStyle.rawValue,
-            "\(settings.kanjiLevel)", "\(settings.showRomaji)", "\(settings.showFurigana)",
-        ].joined(separator: "|")
-    }
-
     private var languageBinding: Binding<InputLanguage> {
         Binding(
             get: { settings.inputLanguage },
@@ -237,7 +220,7 @@ struct ContentView: View {
                     .multilineTextAlignment(.center)
                 HStack {
                     Button("Try again", action: lookUp)
-                    Button("Settings") { showSettings = true }
+                    Button("Settings") { model.section = .settings }
                 }
                 .buttonStyle(.bordered)
             }
@@ -272,5 +255,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    RootView()
 }

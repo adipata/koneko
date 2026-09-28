@@ -31,6 +31,27 @@ nonisolated struct OpenRouterClient: Sendable {
     var session: URLSession = .shared
 
     func translate(_ text: String, language: InputLanguage) async throws -> [WordCandidate] {
+        let result: TranslationResult = try await requestJSON(
+            system: TranslationPrompt.system,
+            user: TranslationPrompt.userMessage(for: text, language: language),
+            schemaName: "japanese_words",
+            schema: TranslationPrompt.schema
+        )
+        var seen = Set<String>()
+        return result.candidates
+            .compactMap { $0.validated() }
+            .filter { seen.insert($0.japanese).inserted }
+            .prefix(4)
+            .map { $0 }
+    }
+
+    /// Sends a chat request that must answer with JSON matching `schema`, and decodes it.
+    func requestJSON<Output: Decodable & Sendable>(
+        system: String,
+        user: String,
+        schemaName: String,
+        schema: [String: Any]
+    ) async throws -> Output {
         var request = URLRequest(url: Self.endpoint, timeoutInterval: 30)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -40,12 +61,12 @@ nonisolated struct OpenRouterClient: Sendable {
         let body: [String: Any] = [
             "model": model,
             "messages": [
-                ["role": "system", "content": TranslationPrompt.system],
-                ["role": "user", "content": TranslationPrompt.userMessage(for: text, language: language)],
+                ["role": "system", "content": system],
+                ["role": "user", "content": user],
             ],
             "response_format": [
                 "type": "json_schema",
-                "json_schema": ["name": "japanese_words", "strict": true, "schema": TranslationPrompt.schema],
+                "json_schema": ["name": schemaName, "strict": true, "schema": schema],
             ],
             // Keep thinking short: a child is waiting for the answer.
             "reasoning": ["effort": "low"],
@@ -73,25 +94,20 @@ nonisolated struct OpenRouterClient: Sendable {
 
         let completion = try? JSONDecoder().decode(ChatCompletion.self, from: data)
         guard let content = completion?.choices.first?.message.content,
-              let result = Self.decodeResult(content)
+              let result: Output = Self.decodeJSON(content)
         else {
             throw TranslationError.badResponse
         }
-        var seen = Set<String>()
-        return result.candidates
-            .compactMap { $0.validated() }
-            .filter { seen.insert($0.japanese).inserted }
-            .prefix(4)
-            .map { $0 }
+        return result
     }
 
     /// Parses the model's JSON, tolerating a surrounding ```json fence.
-    static func decodeResult(_ content: String) -> TranslationResult? {
+    static func decodeJSON<Output: Decodable>(_ content: String) -> Output? {
         var json = content.trimmingCharacters(in: .whitespacesAndNewlines)
         if let start = json.firstIndex(of: "{"), let end = json.lastIndex(of: "}") {
             json = String(json[start...end])
         }
-        return try? JSONDecoder().decode(TranslationResult.self, from: Data(json.utf8))
+        return try? JSONDecoder().decode(Output.self, from: Data(json.utf8))
     }
 
     private static func errorMessage(in data: Data) -> String {
