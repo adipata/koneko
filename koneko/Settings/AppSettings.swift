@@ -20,6 +20,7 @@ final class AppSettings {
         static let model = "model"
         static let inputLanguage = "inputLanguage"
         static let showRomaji = "showRomaji"
+        static let showRomajiInLists = "showRomajiInLists"
         static let speakAutomatically = "speakAutomatically"
         static let syncToWatch = "syncToWatch"
         static let writingStyle = "writingStyle"
@@ -39,6 +40,11 @@ final class AppSettings {
 
     var showRomaji: Bool {
         didSet { defaults.set(showRomaji, forKey: Keys.showRomaji) }
+    }
+
+    /// Romaji next to each word in My words (and the watch's word list).
+    var showRomajiInLists: Bool {
+        didSet { defaults.set(showRomajiInLists, forKey: Keys.showRomajiInLists) }
     }
 
     var speakAutomatically: Bool {
@@ -72,6 +78,7 @@ final class AppSettings {
         model = defaults.string(forKey: Keys.model) ?? Self.modelOptions[0].id
         inputLanguage = defaults.string(forKey: Keys.inputLanguage).flatMap { InputLanguage(rawValue: $0) } ?? .english
         showRomaji = defaults.object(forKey: Keys.showRomaji) as? Bool ?? true
+        showRomajiInLists = defaults.object(forKey: Keys.showRomajiInLists) as? Bool ?? true
         speakAutomatically = defaults.object(forKey: Keys.speakAutomatically) as? Bool ?? true
         syncToWatch = defaults.bool(forKey: Keys.syncToWatch)
         writingStyle = defaults.string(forKey: Keys.writingStyle).flatMap { WritingStyle(rawValue: $0) } ?? .schoolLevel

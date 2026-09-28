@@ -36,7 +36,7 @@ struct RootView: View {
                     history: model.history,
                     style: model.settings.display,
                     onSelect: { model.open($0) },
-                    showRomaji: model.settings.showRomaji
+                    showRomaji: model.settings.showRomajiInLists
                 )
             }
             Tab("Learn", systemImage: "character.book.closed", value: AppSection.learn) {
@@ -65,6 +65,7 @@ struct RootView: View {
         return [
             "\(model.history.revision)", "\(settings.syncToWatch)", settings.writingStyle.rawValue,
             "\(settings.kanjiLevel)", "\(settings.showRomaji)", "\(settings.showFurigana)",
+            "\(settings.showRomajiInLists)",
         ].joined(separator: "|")
     }
 }

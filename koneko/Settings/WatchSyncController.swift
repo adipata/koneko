@@ -17,6 +17,7 @@ final class WatchSyncController {
             writingStyle: settings.writingStyle.rawValue,
             kanjiLevel: settings.kanjiLevel,
             showRomaji: settings.showRomaji,
+            showRomajiInLists: settings.showRomajiInLists,
             showFurigana: settings.showFurigana,
             source: Self.deviceKind
         )

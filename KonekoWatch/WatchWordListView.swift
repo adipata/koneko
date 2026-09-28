@@ -118,7 +118,7 @@ struct WatchWordListView: View {
     private func rows(_ entries: [HistoryEntry]) -> some View {
         ForEach(entries) { entry in
             NavigationLink(value: WatchWordPage(entries: entries, startID: entry.id)) {
-                WatchWordRow(word: store.display(entry.word), showRomaji: store.snapshot?.showRomaji ?? true)
+                WatchWordRow(word: store.display(entry.word), showRomaji: store.snapshot.map { $0.showRomajiInLists ?? $0.showRomaji } ?? true)
             }
         }
     }
@@ -149,7 +149,7 @@ struct WatchFolderView: View {
             }
             ForEach(entries) { entry in
                 NavigationLink(value: WatchWordPage(entries: entries, startID: entry.id)) {
-                    WatchWordRow(word: store.display(entry.word), showRomaji: store.snapshot?.showRomaji ?? true)
+                    WatchWordRow(word: store.display(entry.word), showRomaji: store.snapshot.map { $0.showRomajiInLists ?? $0.showRomaji } ?? true)
                 }
             }
         }

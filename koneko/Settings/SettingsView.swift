@@ -129,6 +129,7 @@ struct SettingsView: View {
                         }
                     }
                     Toggle("Show romaji (Latin letters)", isOn: $settings.showRomaji)
+                    Toggle("Show romaji in My words", isOn: $settings.showRomajiInLists)
                 }
 
                 Section {

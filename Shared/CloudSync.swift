@@ -6,6 +6,8 @@ nonisolated struct WatchSnapshot: Codable, Sendable {
     var writingStyle: String
     var kanjiLevel: Int
     var showRomaji: Bool
+    /// Romaji in the word list (nil in lists synced by older versions: then like showRomaji).
+    var showRomajiInLists: Bool?
     var showFurigana: Bool
     var updatedAt = Date.now
     /// Which device published it ("iPhone", "iPad", "Mac"), shown on the watch.
