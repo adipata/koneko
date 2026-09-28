@@ -5,6 +5,7 @@ struct HistoryView: View {
     let history: HistoryStore
     let style: (WordCandidate) -> WordCandidate
     let onSelect: (WordCandidate) -> Void
+    var showRomaji = true
 
     private enum Filter: Hashable {
         case all
@@ -174,8 +175,16 @@ struct HistoryView: View {
                 Text(word.emoji.isEmpty ? "📝" : word.emoji)
                     .font(.largeTitle)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(word.japanese)
-                        .font(.handwriting(size: 30))
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text(word.japanese)
+                            .font(.handwriting(size: 30))
+                        if showRomaji, !word.displayRomaji.isEmpty {
+                            Text(word.displayRomaji)
+                                .font(.system(.title3, design: .rounded).weight(.medium))
+                                .foregroundStyle(.orange)
+                                .lineLimit(1)
+                        }
+                    }
                     HStack(spacing: 6) {
                         if !word.meaning.isEmpty {
                             Text(word.meaning)

@@ -32,9 +32,12 @@ struct RootView: View {
                 ContentView(model: model)
             }
             Tab("My words", systemImage: "book", value: AppSection.words) {
-                HistoryView(history: model.history, style: model.settings.display) { word in
-                    model.open(word)
-                }
+                HistoryView(
+                    history: model.history,
+                    style: model.settings.display,
+                    onSelect: { model.open($0) },
+                    showRomaji: model.settings.showRomaji
+                )
             }
             Tab("Learn", systemImage: "character.book.closed", value: AppSection.learn) {
                 LearnView(model: model)

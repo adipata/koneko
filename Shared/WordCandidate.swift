@@ -180,3 +180,11 @@ nonisolated extension JapaneseText {
         return result
     }
 }
+
+extension WordCandidate {
+    /// Romaji to show, e.g. "konnichiwa"; derived from the reading if the AI didn't give one.
+    nonisolated var displayRomaji: String {
+        if !romaji.isEmpty { return romaji }
+        return reading.isEmpty ? "" : JapaneseText.romaji(reading)
+    }
+}
