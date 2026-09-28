@@ -28,6 +28,10 @@ each character being written stroke by stroke.
   (`python3 Tools/build_kanji_info.py`).
 - **Navigation:** Write · My words · Learn · Settings as a tab bar on iPhone and a sidebar on
   iPad/Mac (`TabView` with `.sidebarAdaptable`).
+- **Watch kana:** Learn → Hiragana/Katakana on the watch: pick a sound from the list, then a
+  full-screen character drawn from its strokes (tap to replay the stroke order); Digital Crown
+  for the next sound, swipe left/right to switch hiragana ⇄ katakana. Uses the small
+  `Shared/Resources/kana_strokes.json`.
 - **My words:** pin words, sort them into folders, delete single words; export/import the
   whole list (words, folders, pins, stars) as JSON from Settings.
 

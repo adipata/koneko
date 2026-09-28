@@ -1,7 +1,7 @@
 import Combine
 import SwiftUI
 
-/// Main screen: pinned words, folders and all words.
+/// Main screen: kana charts, pinned words, folders and all words.
 struct WatchWordListView: View {
     let store: WatchStore
     @Environment(\.scenePhase) private var scenePhase
@@ -14,52 +14,67 @@ struct WatchWordListView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if store.entries.isEmpty {
-                    emptyState
-                } else {
-                    List {
-                        if isSearching {
-                            let results = store.entries.searched(searchText)
-                            Section(results.isEmpty ? "Nothing found" : "\(results.count) found") {
-                                rows(results)
-                            }
-                        } else {
-                            if !store.pinned.isEmpty {
-                                Section("📌 Pinned") {
-                                    rows(store.pinned)
+                List {
+                    if !isSearching {
+                        Section("Learn") {
+                            ForEach(KanaScript.allCases) { script in
+                                NavigationLink {
+                                    WatchKanaListView(script: script)
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        Text(script.text("あ"))
+                                            .font(.title2)
+                                        Text(script.title)
+                                    }
                                 }
                             }
-                            if !store.folders.isEmpty {
-                                Section("Folders") {
-                                    ForEach(store.folders) { folder in
-                                        NavigationLink {
-                                            WatchFolderView(store: store, folder: folder)
-                                        } label: {
-                                            HStack {
-                                                Text("📁 \(folder.name)")
-                                                Spacer()
-                                                Text("\(store.entries(in: folder).count)")
-                                                    .foregroundStyle(.secondary)
-                                            }
+                        }
+                    }
+                    if store.entries.isEmpty {
+                        Section("My words") {
+                            emptyState
+                        }
+                    } else if isSearching {
+                        let results = store.entries.searched(searchText)
+                        Section(results.isEmpty ? "Nothing found" : "\(results.count) found") {
+                            rows(results)
+                        }
+                    } else {
+                        if !store.pinned.isEmpty {
+                            Section("📌 Pinned") {
+                                rows(store.pinned)
+                            }
+                        }
+                        if !store.folders.isEmpty {
+                            Section("Folders") {
+                                ForEach(store.folders) { folder in
+                                    NavigationLink {
+                                        WatchFolderView(store: store, folder: folder)
+                                    } label: {
+                                        HStack {
+                                            Text("📁 \(folder.name)")
+                                            Spacer()
+                                            Text("\(store.entries(in: folder).count)")
+                                                .foregroundStyle(.secondary)
                                         }
                                     }
                                 }
                             }
-                            Section("All words") {
-                                rows(store.entries)
-                            }
                         }
-                        Section {
-                            refreshButton
-                        } footer: {
-                            if let snapshot = store.snapshot {
-                                Text("Updated \(snapshot.updatedAt.formatted(date: .abbreviated, time: .shortened))\(snapshot.source.map { " from \($0)" } ?? "")")
-                            }
+                        Section("All words") {
+                            rows(store.entries)
                         }
                     }
-                    .refreshable { await store.refresh() }
-                    .searchable(text: $searchText, prompt: "Search in English")
+                    Section {
+                        refreshButton
+                    } footer: {
+                        if let snapshot = store.snapshot {
+                            Text("Updated \(snapshot.updatedAt.formatted(date: .abbreviated, time: .shortened))\(snapshot.source.map { " from \($0)" } ?? "")")
+                        }
+                    }
                 }
+                .refreshable { await store.refresh() }
+                .searchable(text: $searchText, prompt: "Search in English")
             }
             .navigationTitle("Koneko")
             .toolbar {
@@ -72,6 +87,9 @@ struct WatchWordListView: View {
             }
             .navigationDestination(for: WatchWordPage.self) { page in
                 WatchWordPager(store: store, entries: page.entries, selection: page.startID)
+            }
+            .navigationDestination(for: WatchKanaPage.self) { page in
+                WatchKanaPager(script: page.script, selection: page.startID)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSUbiquitousKeyValueStore.didChangeExternallyNotification)) { _ in
@@ -106,19 +124,14 @@ struct WatchWordListView: View {
     }
 
     private var emptyState: some View {
-        ScrollView {
-            VStack(spacing: 10) {
-                Text("🐱").font(.system(size: 44))
-                Text("No words yet")
-                    .font(.headline)
-                Text("On the iPhone, iPad or Mac, open Koneko → Settings → Apple Watch and turn on “Sync My words”.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                refreshButton
-            }
-            .padding(.horizontal, 4)
+        VStack(spacing: 6) {
+            Text("🐱 No words yet")
+                .font(.headline)
+            Text("On the iPhone, iPad or Mac, open Koneko → Settings → Apple Watch and turn on “Sync My words”.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
+        .padding(.vertical, 4)
     }
 }
 

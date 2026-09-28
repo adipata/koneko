@@ -5,7 +5,8 @@ Usage:
     python3 Tools/build_strokes.py                # download the pinned KanjiVG release
     python3 Tools/build_strokes.py path/to/kanji  # use an unpacked kanji/ directory
 
-Output: koneko/Resources/strokes.json
+Output: koneko/Resources/strokes.json (all characters, for the app) and
+        Shared/Resources/kana_strokes.json (hiragana + katakana only, small, for the watch)
     { "猫": { "s": ["M20.5,...", ...], "n": [[29.25,19.5], ...] }, ... }
     "s" = SVG path data per stroke, in stroke order (109x109 coordinate space)
     "n" = position of each stroke's number label
@@ -24,6 +25,7 @@ from pathlib import Path
 RELEASE = "r20250816"
 URL = f"https://github.com/KanjiVG/kanjivg/releases/download/{RELEASE}/kanjivg-{RELEASE[1:]}-main.zip"
 OUT = Path(__file__).resolve().parent.parent / "koneko" / "Resources" / "strokes.json"
+KANA_OUT = Path(__file__).resolve().parent.parent / "Shared" / "Resources" / "kana_strokes.json"
 
 SVG_NS = "{http://www.w3.org/2000/svg}"
 STROKE_ID = re.compile(r"-s(\d+)$")
@@ -77,6 +79,11 @@ def main():
     with OUT.open("w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
     print(f"Wrote {len(result)} characters to {OUT} ({OUT.stat().st_size // 1024} KB)", file=sys.stderr)
+
+    kana = {c: v for c, v in result.items() if 0x3041 <= ord(c) <= 0x3096 or 0x30A1 <= ord(c) <= 0x30FA or c == "ー"}
+    with KANA_OUT.open("w", encoding="utf-8") as f:
+        json.dump(kana, f, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    print(f"Wrote {len(kana)} kana to {KANA_OUT}", file=sys.stderr)
 
 
 if __name__ == "__main__":
