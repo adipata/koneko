@@ -6,21 +6,22 @@ struct WatchWordListView: View {
     let store: WatchStore
     @Environment(\.scenePhase) private var scenePhase
     @State private var searchText = ""
+    /// All navigation goes through this path (value-based links only), so pushed screens stay
+    /// put when the list refreshes.
+    @State private var path: [WatchRoute] = []
 
     private var isSearching: Bool {
         !searchText.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 List {
                     if !isSearching {
                         Section("Learn") {
                             ForEach(KanaScript.allCases) { script in
-                                NavigationLink {
-                                    WatchKanaListView(script: script)
-                                } label: {
+                                NavigationLink(value: WatchRoute.kanaList(script)) {
                                     HStack(spacing: 10) {
                                         Text(script.text("あ"))
                                             .font(.title2)
@@ -48,9 +49,7 @@ struct WatchWordListView: View {
                         if !store.folders.isEmpty {
                             Section("Folders") {
                                 ForEach(store.folders) { folder in
-                                    NavigationLink {
-                                        WatchFolderView(store: store, folder: folder)
-                                    } label: {
+                                    NavigationLink(value: WatchRoute.folder(folder.id)) {
                                         HStack {
                                             Text("📁 \(folder.name)")
                                             Spacer()
@@ -85,11 +84,19 @@ struct WatchWordListView: View {
                     .disabled(store.isRefreshing)
                 }
             }
-            .navigationDestination(for: WatchWordPage.self) { page in
-                WatchWordPager(store: store, entries: page.entries, selection: page.startID)
-            }
-            .navigationDestination(for: WatchKanaPage.self) { page in
-                WatchKanaPager(script: page.script, selection: page.startID)
+            .navigationDestination(for: WatchRoute.self) { route in
+                switch route {
+                case .kanaList(let script):
+                    WatchKanaListView(script: script)
+                case .kana(let page):
+                    WatchKanaPager(script: page.script, selection: page.startID)
+                case .folder(let id):
+                    if let folder = store.folders.first(where: { $0.id == id }) {
+                        WatchFolderView(store: store, folder: folder)
+                    }
+                case .words(let page):
+                    WatchWordPager(store: store, entries: page.entries, selection: page.startID)
+                }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSUbiquitousKeyValueStore.didChangeExternallyNotification)) { _ in
@@ -117,7 +124,7 @@ struct WatchWordListView: View {
     @ViewBuilder
     private func rows(_ entries: [HistoryEntry]) -> some View {
         ForEach(entries) { entry in
-            NavigationLink(value: WatchWordPage(entries: entries, startID: entry.id)) {
+            NavigationLink(value: WatchRoute.words(WatchWordPage(entries: entries, startID: entry.id))) {
                 WatchWordRow(word: store.display(entry.word), showRomaji: store.snapshot.map { $0.showRomajiInLists ?? $0.showRomaji } ?? true)
             }
         }
@@ -148,7 +155,7 @@ struct WatchFolderView: View {
                     .foregroundStyle(.secondary)
             }
             ForEach(entries) { entry in
-                NavigationLink(value: WatchWordPage(entries: entries, startID: entry.id)) {
+                NavigationLink(value: WatchRoute.words(WatchWordPage(entries: entries, startID: entry.id))) {
                     WatchWordRow(word: store.display(entry.word), showRomaji: store.snapshot.map { $0.showRomajiInLists ?? $0.showRomaji } ?? true)
                 }
             }

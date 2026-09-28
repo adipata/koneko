@@ -11,6 +11,14 @@ enum WatchKanaStrokes {
     }()
 }
 
+/// Every screen the watch app can push.
+enum WatchRoute: Hashable {
+    case kanaList(KanaScript)
+    case kana(WatchKanaPage)
+    case folder(UUID)
+    case words(WatchWordPage)
+}
+
 /// Navigation value: open the character screen at a sound, in a script.
 struct WatchKanaPage: Hashable {
     let script: KanaScript
@@ -26,7 +34,7 @@ struct WatchKanaListView: View {
             ForEach(KanaChart.sections) { section in
                 Section(section.title) {
                     ForEach(section.rows.flatMap { $0.cells.compactMap { $0 } }) { cell in
-                        NavigationLink(value: WatchKanaPage(script: script, startID: cell.id)) {
+                        NavigationLink(value: WatchRoute.kana(WatchKanaPage(script: script, startID: cell.id))) {
                             HStack(spacing: 12) {
                                 Text(script.text(cell.hiragana))
                                     .font(.title2)
