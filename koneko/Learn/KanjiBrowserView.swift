@@ -14,10 +14,6 @@ struct KanjiBrowserView: View {
         !searchText.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    private var shown: [KanjiInfo] {
-        isSearching ? library.search(searchText) : library.kanji(grade: grade)
-    }
-
     var body: some View {
         StudySplit(selection: $selection, placeholder: "Choose a kanji") {
             VStack(alignment: .leading, spacing: 16) {
@@ -25,21 +21,43 @@ struct KanjiBrowserView: View {
                 if !isSearching {
                     gradePicker
                 }
-                let kanji = shown
-                Text(isSearching ? "\(kanji.count) found" : "\(grade == 7 ? "Secondary school" : "Grade \(grade)"): \(kanji.count) kanji")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                if kanji.isEmpty, isSearching {
-                    ContentUnavailableView.search(text: searchText)
-                }
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 8)], spacing: 8) {
-                    ForEach(kanji) { info in
-                        tile(info)
+                if isSearching {
+                    let results = library.search(searchText)
+                    Text("\(results.count) found")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    if results.isEmpty {
+                        ContentUnavailableView.search(text: searchText)
+                    }
+                    grid(results)
+                } else {
+                    let groups = library.groups(grade: grade)
+                    Text("\(grade == 7 ? "Secondary school" : "Grade \(grade)"): \(groups.reduce(0) { $0 + $1.kanji.count }) kanji")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    ForEach(groups) { group in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("\(group.emoji) \(group.title)")
+                                .font(.headline)
+                            + Text("  \(group.kanji.count)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            grid(group.kanji)
+                        }
+                        .padding(.top, 4)
                     }
                 }
             }
         } detail: { info in
             KanjiDetailView(model: model, info: info)
+        }
+    }
+
+    private func grid(_ kanji: [KanjiInfo]) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 8)], spacing: 8) {
+            ForEach(kanji) { info in
+                tile(info)
+            }
         }
     }
 

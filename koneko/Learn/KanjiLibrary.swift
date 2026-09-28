@@ -11,6 +11,8 @@ struct KanjiInfo: Identifiable, Hashable {
     let on: [String]
     /// "Japanese" readings (kun'yomi), e.g. "ひと.つ" (the part after the dot is written in kana).
     let kun: [String]
+    /// Its radical ("family"), e.g. 氵 for 海; used to group kanji from grade 3 on.
+    let radical: String?
 
     var id: String { character }
 
@@ -36,6 +38,7 @@ final class KanjiLibrary {
         let m: [String]
         let on: [String]
         let kun: [String]
+        let r: String?
     }
 
     private(set) var all: [KanjiInfo] = []
@@ -48,7 +51,10 @@ final class KanjiLibrary {
               let raw = try? JSONDecoder().decode([String: Raw].self, from: data)
         else { return }
         all = raw.map { character, info in
-            KanjiInfo(character: character, grade: info.g, strokes: info.s, meanings: info.m, on: info.on, kun: info.kun)
+            KanjiInfo(
+                character: character, grade: info.g, strokes: info.s, meanings: info.m,
+                on: info.on, kun: info.kun, radical: info.r
+            )
         }
         .sorted { ($0.grade, $0.strokes, $0.character) < ($1.grade, $1.strokes, $1.character) }
         byCharacter = Dictionary(uniqueKeysWithValues: all.map { ($0.character, $0) })
@@ -60,6 +66,11 @@ final class KanjiLibrary {
 
     func kanji(grade: Int) -> [KanjiInfo] {
         all.filter { $0.grade == grade }
+    }
+
+    /// The kanji of a grade in themed groups (grades 1–2) or radical families (grade 3+).
+    func groups(grade: Int) -> [KanjiGroup] {
+        KanjiGroups.groups(for: kanji(grade: grade), grade: grade)
     }
 
     /// Search by meaning (English), reading (kana or romaji) or the kanji itself.
