@@ -17,6 +17,8 @@ enum WatchRoute: Hashable {
     case kana(WatchKanaPage)
     case folder(UUID)
     case words(WatchWordPage)
+    case flashMenu
+    case flash(FlashDeck)
 }
 
 /// Navigation value: open the character screen at a sound, in a script.

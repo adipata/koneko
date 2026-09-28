@@ -24,7 +24,7 @@ each character being written stroke by stroke.
   watchOS app (`KonekoWatch/`, shared code in `Shared/`). Setup: see `docs/AppleWatch.md`.
 - **Learn:** hiragana and katakana charts (basic, ゛゜, combined sounds) and kanji by school
   grade with search; each character shows its sound, stroke order and practice; kanji get an
-  AI explanation with example words (cached). Offline kanji data: `koneko/Resources/kanji_info.json`
+  AI explanation with example words (cached). Offline kanji data: `Shared/Resources/kanji_info.json`
   (`python3 Tools/build_kanji_info.py`).
 - **Navigation:** Write · My words · Learn · Settings as a tab bar on iPhone and a sidebar on
   iPad/Mac (`TabView` with `.sidebarAdaptable`).
@@ -32,6 +32,9 @@ each character being written stroke by stroke.
   full-screen character drawn from its strokes (tap to replay the stroke order); Digital Crown
   for the next sound, swipe left/right to switch hiragana ⇄ katakana. Uses the small
   `Shared/Resources/kana_strokes.json`.
+- **Flash cards:** Learn → Flash cards (iPhone/iPad/Mac) and Learn → 🃏 Flash cards (watch):
+  endless random cards for hiragana, katakana or the kanji of a grade, 日本語 → English or
+  English → 日本語; tap to flip, Next / swipe / Digital Crown for another. No scores.
 - **Splash & About:** animated launch splash with the kitten mascot and sakura petals (tap to
   skip; respects Reduce Motion); Settings → About Koneko with version, features and privacy.
   Mascot drawn by `Tools/make_mascot.py`.

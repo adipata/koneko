@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 /// A kanji with its meanings and readings (from Resources/kanji_info.json, works offline).
 struct KanjiInfo: Identifiable, Hashable {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build koneko/Resources/kanji_info.json: meanings, readings and stroke counts of the 2,136
+"""Build Shared/Resources/kanji_info.json: meanings, readings and stroke counts of the 2,136
 jōyō kanji, used by the Learn → Kanji browser (works offline).
 
     { "海": {"g": 2, "s": 9, "m": ["Sea"], "on": ["かい"], "kun": ["うみ"], "r": "氵"}, ... }
@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 URL = "https://raw.githubusercontent.com/davidluzgouveia/kanji-data/master/kanji.json"
 GRADES = ROOT / "Shared" / "Resources" / "kanji_grades.json"
-OUT = ROOT / "koneko" / "Resources" / "kanji_info.json"
+OUT = ROOT / "Shared" / "Resources" / "kanji_info.json"
 KANJIVG_URL = "https://github.com/KanjiVG/kanjivg/releases/download/r20250816/kanjivg-20250816-main.zip"
 
 # Variants of the same family are merged, so e.g. 亻 and 人 form one "person" group.

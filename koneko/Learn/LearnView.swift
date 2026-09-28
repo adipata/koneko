@@ -19,6 +19,17 @@ struct LearnView: View {
     @AppStorage("learnPart") private var part = Part.hiragana
     /// Shared by both charts, so switching script keeps the same sound selected.
     @State private var selectedKana: KanaCell?
+    /// Same key as the grade buttons in the kanji browser, so flash cards use the chosen grade.
+    @AppStorage("learnKanjiGrade") private var kanjiGrade = 1
+    @State private var flashDeck: FlashDeck?
+
+    private var currentDeck: FlashDeck {
+        switch part {
+        case .hiragana: .kana(.hiragana)
+        case .katakana: .kana(.katakana)
+        case .kanji: .kanji(grade: kanjiGrade)
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -49,6 +60,21 @@ struct LearnView: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Flash cards", systemImage: "rectangle.on.rectangle.angled") {
+                        flashDeck = currentDeck
+                    }
+                    .labelStyle(.titleAndIcon)
+                    .help("Practise \(currentDeck.title) with flash cards")
+                }
+            }
+            .sheet(item: $flashDeck) { deck in
+                FlashCardSessionView(deck: deck, kanji: model.kanji)
+                    #if os(macOS)
+                    .frame(minWidth: 480, minHeight: 640)
+                    #endif
+            }
         }
     }
 }

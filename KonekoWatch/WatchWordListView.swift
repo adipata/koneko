@@ -4,6 +4,7 @@ import SwiftUI
 /// Main screen: kana charts, pinned words, folders and all words.
 struct WatchWordListView: View {
     let store: WatchStore
+    let kanji: KanjiLibrary
     @Environment(\.scenePhase) private var scenePhase
     @State private var searchText = ""
     /// All navigation goes through this path (value-based links only), so pushed screens stay
@@ -27,6 +28,13 @@ struct WatchWordListView: View {
                                             .font(.title2)
                                         Text(script.title)
                                     }
+                                }
+                            }
+                            NavigationLink(value: WatchRoute.flashMenu) {
+                                HStack(spacing: 10) {
+                                    Text("🃏")
+                                        .font(.title2)
+                                    Text("Flash cards")
                                 }
                             }
                         }
@@ -96,6 +104,10 @@ struct WatchWordListView: View {
                     }
                 case .words(let page):
                     WatchWordPager(store: store, entries: page.entries, selection: page.startID)
+                case .flashMenu:
+                    WatchFlashMenuView()
+                case .flash(let deck):
+                    WatchFlashSessionView(deck: deck, kanji: kanji)
                 }
             }
         }
