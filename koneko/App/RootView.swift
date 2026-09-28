@@ -3,8 +3,30 @@ import SwiftUI
 /// Tab bar on iPhone; sidebar on iPad and Mac (`.sidebarAdaptable`).
 struct RootView: View {
     @State private var model = AppModel()
+    @State private var showSplash = true
 
     var body: some View {
+        ZStack {
+            tabs
+            if showSplash {
+                SplashView()
+                    .transition(.opacity)
+                    .zIndex(1)
+                    .onTapGesture { hideSplash() }
+            }
+        }
+        .task {
+            try? await Task.sleep(for: .seconds(2.4))
+            hideSplash()
+        }
+    }
+
+    private func hideSplash() {
+        guard showSplash else { return }
+        withAnimation(.easeOut(duration: 0.4)) { showSplash = false }
+    }
+
+    private var tabs: some View {
         TabView(selection: $model.section) {
             Tab("Write", systemImage: "pencil.and.scribble", value: AppSection.write) {
                 ContentView(model: model)

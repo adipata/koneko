@@ -39,6 +39,25 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
+                    NavigationLink {
+                        AboutView()
+                    } label: {
+                        HStack(spacing: 14) {
+                            Image("Mascot")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 44, height: 44)
+                            VStack(alignment: .leading) {
+                                Text("About Koneko")
+                                    .font(.headline)
+                                Text(AppInfo.versionText)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                Section {
                     SecureField("API key", text: $apiKey, prompt: Text("sk-or-…"))
                         .autocorrectionDisabled()
                         .onSubmit { saveKey() }
