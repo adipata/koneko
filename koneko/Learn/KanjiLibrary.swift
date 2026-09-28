@@ -17,7 +17,7 @@ struct KanjiInfo: Identifiable, Hashable {
     var id: String { character }
 
     /// Readings without dictionary marks: "ひと.つ" → "ひとつ", "-び" → "び".
-    static func clean(_ reading: String) -> String {
+    nonisolated static func clean(_ reading: String) -> String {
         reading.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: "-", with: "")
     }
 
