@@ -21,6 +21,7 @@ struct StudySplit<Item: Identifiable, Browser: View, Detail: View>: View {
                 browser()
                     .padding()
             }
+            .scrollDismissesKeyboard(.immediately)
             .sheet(item: $selection) { item in
                 NavigationStack {
                     ScrollView {
@@ -41,6 +42,7 @@ struct StudySplit<Item: Identifiable, Browser: View, Detail: View>: View {
                     browser()
                         .padding()
                 }
+                .scrollDismissesKeyboard(.immediately)
                 .frame(maxWidth: .infinity)
                 Divider()
                 ScrollView {

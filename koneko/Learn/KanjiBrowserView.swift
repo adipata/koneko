@@ -6,6 +6,7 @@ struct KanjiBrowserView: View {
 
     @AppStorage("learnKanjiGrade") private var grade = 1
     @State private var searchText = ""
+    @FocusState private var searchFocused: Bool
     @State private var selection: KanjiInfo?
 
     private var library: KanjiLibrary { model.kanji }
@@ -69,8 +70,14 @@ struct KanjiBrowserView: View {
                 .foregroundStyle(.secondary)
             TextField("Search: mountain, やま, yama or 山", text: $searchText)
                 .autocorrectionDisabled()
+                .focused($searchFocused)
+                .submitLabel(.search)
+                .onSubmit { searchFocused = false }
             if isSearching {
-                Button("Clear", systemImage: "xmark.circle.fill") { searchText = "" }
+                Button("Clear", systemImage: "xmark.circle.fill") {
+                    searchText = ""
+                    searchFocused = false
+                }
                     .labelStyle(.iconOnly)
                     .foregroundStyle(.secondary)
                     .buttonStyle(.plain)
@@ -79,6 +86,7 @@ struct KanjiBrowserView: View {
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
         .frame(maxWidth: 420)
+        .keyboardDoneButton { searchFocused = false }
     }
 
     private var gradePicker: some View {

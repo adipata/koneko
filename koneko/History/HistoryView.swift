@@ -180,8 +180,8 @@ struct HistoryView: View {
                             .font(.handwriting(size: 30))
                         if showRomaji, !word.displayRomaji.isEmpty {
                             Text(word.displayRomaji)
-                                .font(.system(.title3, design: .rounded).weight(.medium))
-                                .foregroundStyle(.orange)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
                     }

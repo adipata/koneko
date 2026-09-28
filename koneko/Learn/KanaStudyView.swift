@@ -9,6 +9,8 @@ struct KanaStudyView: View {
     let switchScript: (KanaScript) -> Void
 
     @State private var typed = ""
+    @State private var notFound = false
+    @FocusState private var fieldFocused: Bool
 
     var body: some View {
         StudySplit(selection: $selection, placeholder: "Choose a character") {
@@ -31,16 +33,42 @@ struct KanaStudyView: View {
                 .foregroundStyle(.secondary)
             TextField("Type \(script.text("か")) or ka", text: $typed)
                 .autocorrectionDisabled()
+                .focused($fieldFocused)
+                .submitLabel(.search)
                 .onSubmit(find)
-                .onChange(of: typed) { find() }
+                .onChange(of: typed) { notFound = false }
+            if !typed.isEmpty {
+                Button("Clear", systemImage: "xmark.circle.fill") { typed = "" }
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+            }
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+        .overlay(alignment: .bottomLeading) {
+            if notFound {
+                Text("No character “\(typed)”")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .offset(y: 18)
+            }
+        }
         .frame(maxWidth: 360)
+        .keyboardDoneButton { fieldFocused = false }
     }
 
+    /// Runs when she presses Return/Search: opens the character, then clears the box and
+    /// hides the keyboard so the chart and the tabs are visible again.
     private func find() {
-        guard let cell = KanaChart.find(typed) else { return }
+        guard let cell = KanaChart.find(typed) else {
+            notFound = !typed.trimmingCharacters(in: .whitespaces).isEmpty
+            return
+        }
+        defer {
+            typed = ""
+            fieldFocused = false
+        }
         // Typed katakana on the hiragana chart (or the other way round): switch charts.
         if let first = typed.unicodeScalars.first {
             if JapaneseText.isKatakana(first), script == .hiragana { switchScript(.katakana) }

@@ -179,8 +179,8 @@ struct WatchWordRow: View {
                     .minimumScaleFactor(0.6)
                 if showRomaji, !word.displayRomaji.isEmpty {
                     Text(word.displayRomaji)
-                        .font(.caption)
-                        .foregroundStyle(.orange)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
                 if !word.meaning.isEmpty {
