@@ -37,11 +37,13 @@ struct KanjiBrowserView: View {
                         .foregroundStyle(.secondary)
                     ForEach(groups) { group in
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("\(group.emoji) \(group.title)")
-                                .font(.headline)
-                            + Text("  \(group.kanji.count)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text("\(group.emoji) \(group.title)")
+                                    .font(.headline)
+                                Text("\(group.kanji.count)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
                             grid(group.kanji)
                         }
                         .padding(.top, 4)
