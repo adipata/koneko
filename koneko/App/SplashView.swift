@@ -49,6 +49,9 @@ struct SplashView: View {
                     .multilineTextAlignment(.center)
                     .font(.handwriting(size: 20))
                     .foregroundStyle(.white.opacity(0.95))
+                Text(verbatim: "大好きなナタリーへ")
+                    .font(.handwriting(size: 22))
+                    .foregroundStyle(.white)
             }
             .opacity(appeared ? 1 : 0)
             .padding()
