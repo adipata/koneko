@@ -55,6 +55,27 @@ final class HistoryStore {
         update(entry.id) { $0.folderID = folder?.id }
     }
 
+    // MARK: Several words at once (Select mode)
+
+    func move(_ ids: Set<String>, to folder: WordFolder?) {
+        for index in entries.indices where ids.contains(entries[index].id) {
+            entries[index].folderID = folder?.id
+        }
+        save()
+    }
+
+    func setPinned(_ ids: Set<String>, _ pinned: Bool) {
+        for index in entries.indices where ids.contains(entries[index].id) {
+            entries[index].isPinned = pinned
+        }
+        save()
+    }
+
+    func delete(_ ids: Set<String>) {
+        entries.removeAll { ids.contains($0.id) }
+        save()
+    }
+
     func delete(_ entry: HistoryEntry) {
         entries.removeAll { $0.id == entry.id }
         save()
