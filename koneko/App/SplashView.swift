@@ -45,7 +45,8 @@ struct SplashView: View {
                     .font(.handwriting(size: 58))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
-                Text("こねこ ・ learn to write Japanese")
+                Text("For Nathalie, my beloved girl")
+                    .multilineTextAlignment(.center)
                     .font(.handwriting(size: 20))
                     .foregroundStyle(.white.opacity(0.95))
             }

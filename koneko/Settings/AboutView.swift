@@ -39,6 +39,8 @@ struct AboutView: View {
                     .font(.title3.weight(.semibold))
                     .multilineTextAlignment(.center)
 
+                dedication
+
                 VStack(alignment: .leading, spacing: 12) {
                     feature("mic.fill", "Say or type a word in English or Japanese")
                     feature("character.book.closed", "See it in kanji, hiragana or katakana, with furigana")
@@ -72,6 +74,23 @@ struct AboutView: View {
         }
         .navigationTitle("About")
         .sheet(isPresented: $showCredits) { CreditsView() }
+    }
+
+    /// A note from her dad, kept in French.
+    private var dedication: some View {
+        VStack(alignment: .trailing, spacing: 10) {
+            Text(verbatim: "“Chère Nathalie, il faut travailler, sinon par goût, au moins par désespoir, puisque, tout bien vérifié, travailler est moins ennuyeux que s'amuser.”")
+                .font(.handwriting(size: 20))
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(verbatim: "Tati")
+                .font(.handwriting(size: 22))
+                .foregroundStyle(.orange)
+        }
+        .padding()
+        .frame(maxWidth: 480)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.pink.opacity(0.08)))
+        .environment(\.locale, Locale(identifier: "fr"))
     }
 
     private func feature(_ icon: String, _ text: String) -> some View {
