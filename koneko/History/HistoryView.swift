@@ -6,6 +6,8 @@ struct HistoryView: View {
     let style: (WordCandidate) -> WordCandidate
     let onSelect: (WordCandidate) -> Void
     var showRomaji = true
+    /// Needed by the flash-card screen (not used for words themselves).
+    var kanji: KanjiLibrary?
 
     private enum Filter: Hashable {
         case all
@@ -15,6 +17,24 @@ struct HistoryView: View {
 
     @State private var filter = Filter.all
     @State private var searchText = ""
+    @State private var flashDeck: FlashDeck?
+
+    /// Flash cards for what's on screen: the search results, or the chosen folder / pinned / all.
+    private var currentDeck: FlashDeck {
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        let entries = query.isEmpty ? filtered : history.entries.searched(query)
+        let title: String
+        if !query.isEmpty {
+            title = "“\(query)”"
+        } else {
+            switch filter {
+            case .all: title = "All my words"
+            case .pinned: title = "📌 Pinned"
+            case .folder(let id): title = "📁 " + (history.folders.first { $0.id == id }?.name ?? "Folder")
+            }
+        }
+        return .words(title: title, words: entries.map { style($0.word) })
+    }
 
     // Folder create / rename
     @State private var showFolderNameAlert = false
@@ -35,6 +55,25 @@ struct HistoryView: View {
             }
             .navigationTitle("My words")
             .searchable(text: $searchText, prompt: "Search in English")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    let deck = currentDeck
+                    Button("Flash cards", systemImage: "rectangle.on.rectangle.angled") {
+                        flashDeck = deck
+                    }
+                    .labelStyle(.titleAndIcon)
+                    .disabled(kanji == nil || { if case .words(_, let words) = deck { words.isEmpty } else { true } }())
+                    .help("Practise these words with flash cards")
+                }
+            }
+            .sheet(item: $flashDeck) { deck in
+                if let kanji {
+                    FlashCardSessionView(deck: deck, kanji: kanji)
+                        #if os(macOS)
+                        .frame(minWidth: 480, minHeight: 640)
+                        #endif
+                }
+            }
             .alert(renamingFolder == nil ? "New folder" : "Rename folder", isPresented: $showFolderNameAlert) {
                 TextField("e.g. 🐾 Animals", text: $folderName)
                 Button("Cancel", role: .cancel) { resetFolderEditing() }

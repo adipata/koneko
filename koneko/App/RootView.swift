@@ -36,7 +36,8 @@ struct RootView: View {
                     history: model.history,
                     style: model.settings.display,
                     onSelect: { model.open($0) },
-                    showRomaji: model.settings.showRomajiInLists
+                    showRomaji: model.settings.showRomajiInLists,
+                    kanji: model.kanji
                 )
             }
             Tab("Learn", systemImage: "character.book.closed", value: AppSection.learn) {

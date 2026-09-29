@@ -21,12 +21,15 @@ enum FlashDeck: Hashable, Identifiable {
     case kanji(grade: Int)
     /// A set she made herself.
     case custom(FlashSet)
+    /// Words from My words (a folder, pinned words or all), already in her writing style.
+    case words(title: String, words: [WordCandidate])
 
     var id: String {
         switch self {
         case .kana(let script): script.rawValue
         case .kanji(let grade): "kanji-\(grade)"
         case .custom(let set): "set-\(set.id.uuidString)"
+        case .words(let title, let words): "words-\(title)-\(words.count)"
         }
     }
 
@@ -35,6 +38,7 @@ enum FlashDeck: Hashable, Identifiable {
         case .kana(let script): script.title
         case .kanji(let grade): grade == 7 ? "Kanji · Secondary" : "Kanji · Grade \(grade)"
         case .custom(let set): set.name
+        case .words(let title, _): title
         }
     }
 
@@ -44,6 +48,18 @@ enum FlashDeck: Hashable, Identifiable {
             return KanaChart.allCells.map { Self.kanaCard($0, script: script) }
         case .kanji(let grade):
             return kanji.kanji(grade: grade).map(Self.kanjiCard)
+        case .words(_, let words):
+            return words.map { word in
+                let romaji = word.displayRomaji
+                let reading = word.reading
+                let detail = [reading == word.japanese ? "" : reading, romaji].filter { !$0.isEmpty }.joined(separator: " · ")
+                return FlashCard(
+                    japanese: word.japanese,
+                    english: [word.emoji, word.meaning].filter { !$0.isEmpty }.joined(separator: " "),
+                    detail: detail.isEmpty ? nil : detail,
+                    speech: word.spokenText
+                )
+            }
         case .custom(let set):
             switch set.kind {
             case .hiragana, .katakana:
