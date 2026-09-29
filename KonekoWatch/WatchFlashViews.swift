@@ -1,8 +1,27 @@
 import SwiftUI
 
-/// Flash-card menu on the watch: direction, then an alphabet or a kanji grade.
+/// Flash-card menu on the watch: direction, then an alphabet, a kanji grade, or one of her sets.
 struct WatchFlashMenuView: View {
+    /// Her sets, synced from the iPhone/iPad/Mac.
+    let sets: [FlashSet]
     @AppStorage("flashDirection") private var direction = FlashDirection.japaneseFirst
+
+    private func sets(_ kind: FlashSetKind) -> [FlashSet] {
+        sets.filter { $0.kind == kind }
+    }
+
+    @ViewBuilder
+    private func setLinks(_ kind: FlashSetKind) -> some View {
+        ForEach(sets(kind)) { set in
+            NavigationLink(value: WatchRoute.flash(.custom(set))) {
+                HStack {
+                    Label(set.name, systemImage: "star.fill")
+                    Spacer()
+                    Text("\(set.items.count)").foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
 
     var body: some View {
         List {
@@ -11,17 +30,19 @@ struct WatchFlashMenuView: View {
                     ForEach(FlashDirection.allCases) { Text($0.title).tag($0) }
                 }
             }
-            Section("Alphabets") {
-                ForEach(KanaScript.allCases) { script in
+            ForEach(KanaScript.allCases) { script in
+                Section(script.title) {
                     NavigationLink(value: WatchRoute.flash(.kana(script))) {
-                        Label(script.title, systemImage: "rectangle.on.rectangle.angled")
+                        Label("All \(script.title.lowercased())", systemImage: "rectangle.on.rectangle.angled")
                     }
+                    setLinks(script == .hiragana ? .hiragana : .katakana)
                 }
             }
             Section("Kanji") {
+                setLinks(.kanji)
                 ForEach(1...7, id: \.self) { grade in
                     NavigationLink(value: WatchRoute.flash(.kanji(grade: grade))) {
-                        Text(grade == 7 ? "Secondary school" : "Grade \(grade)")
+                        Text(grade == 7 ? "All · Secondary school" : "All · Grade \(grade)")
                     }
                 }
             }

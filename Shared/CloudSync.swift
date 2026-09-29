@@ -9,6 +9,8 @@ nonisolated struct WatchSnapshot: Codable, Sendable {
     /// Romaji in the word list (nil in lists synced by older versions: then like showRomaji).
     var showRomajiInLists: Bool?
     var showFurigana: Bool
+    /// Her flash-card sets (nil in lists synced by older versions).
+    var flashSets: [FlashSet]?
     var updatedAt = Date.now
     /// Which device published it ("iPhone", "iPad", "Mac"), shown on the watch.
     var source: String?

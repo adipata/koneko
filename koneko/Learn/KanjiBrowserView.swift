@@ -3,6 +3,8 @@ import SwiftUI
 /// Kanji by school grade (like the "Kanji she knows" setting), with search.
 struct KanjiBrowserView: View {
     let model: AppModel
+    /// Select mode (choosing kanji for a flash-card set), or nil.
+    @Binding var picking: SymbolSelection?
 
     @AppStorage("learnKanjiGrade") private var grade = 1
     @State private var searchText = ""
@@ -44,6 +46,13 @@ struct KanjiBrowserView: View {
                                 Text("\(group.kanji.count)")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
+                                if picking != nil {
+                                    Spacer()
+                                    let ids = group.kanji.map(\.character)
+                                    let allChecked = ids.allSatisfy { picking?.contains($0) == true }
+                                    Button(allChecked ? "Deselect all" : "Select all") { picking?.toggleAll(ids) }
+                                        .font(.subheadline)
+                                }
                             }
                             grid(group.kanji)
                         }
@@ -93,11 +102,17 @@ struct KanjiBrowserView: View {
     }
 
     private func tile(_ info: KanjiInfo) -> some View {
-        let isSelected = selection == info
+        let isPicking = picking != nil
+        let isSelected = !isPicking && selection == info
+        let isChecked = picking?.contains(info.character) == true
         let emoji = KanjiEmoji.map[info.character] ?? model.kanjiExplainer.explanations[info.character]?.emoji
         return Button {
-            selection = info
-            Pronouncer.shared.speak(info.mainReading)
+            if isPicking {
+                picking?.toggle(info.character)
+            } else {
+                selection = info
+                Pronouncer.shared.speak(info.mainReading)
+            }
         } label: {
             VStack(spacing: 2) {
                 Text(info.character)
@@ -124,9 +139,14 @@ struct KanjiBrowserView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(isSelected ? Color.orange : Color.clear, lineWidth: 2)
             )
+            .overlay(alignment: .bottomTrailing) {
+                if isPicking { SelectionCheckmark(isChecked: isChecked) }
+            }
+            .opacity(isPicking && !isChecked ? 0.75 : 1)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(info.character), \(info.shortMeaning)")
+        .accessibilityAddTraits(isChecked ? .isSelected : [])
     }
 }
 

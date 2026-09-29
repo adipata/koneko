@@ -5,6 +5,8 @@ struct KanaStudyView: View {
     let model: AppModel
     let script: KanaScript
     @Binding var selection: KanaCell?
+    /// Select mode (choosing symbols for a flash-card set), or nil.
+    @Binding var picking: SymbolSelection?
     /// Called when she types a character of the other script.
     let switchScript: (KanaScript) -> Void
 
@@ -17,7 +19,7 @@ struct KanaStudyView: View {
             VStack(alignment: .leading, spacing: 20) {
                 findField
                 ForEach(KanaChart.sections) { section in
-                    KanaChartView(section: section, script: script, selection: $selection) { cell in
+                    KanaChartView(section: section, script: script, selection: $selection, picking: $picking) { cell in
                         Pronouncer.shared.speak(cell.hiragana)
                     }
                 }
@@ -69,28 +71,54 @@ struct KanaChartView: View {
     let section: KanaSection
     let script: KanaScript
     @Binding var selection: KanaCell?
+    @Binding var picking: SymbolSelection?
     let onTap: (KanaCell) -> Void
+
+    private var isPicking: Bool { picking != nil }
+    private var allIDs: [String] { section.rows.flatMap { $0.cells.compactMap { $0?.id } } }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(section.title)
-                .font(.headline)
+            HStack {
+                Text(section.title)
+                    .font(.headline)
+                Spacer()
+                if isPicking {
+                    let allChecked = allIDs.allSatisfy { picking?.contains($0) == true }
+                    Button(allChecked ? "Deselect all" : "Select all") { picking?.toggleAll(allIDs) }
+                        .font(.subheadline)
+                }
+            }
             Grid(horizontalSpacing: 6, verticalSpacing: 6) {
                 GridRow {
                     Color.clear.frame(width: 28, height: 1)
-                    ForEach(section.columns, id: \.self) { column in
-                        Text(column)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity)
+                    ForEach(Array(section.columns.enumerated()), id: \.offset) { index, column in
+                        // In Select mode, tapping a column letter (a, i, u…) ticks the whole column.
+                        Button {
+                            picking?.toggleAll(section.rows.compactMap { $0.cells.indices.contains(index) ? $0.cells[index]?.id : nil })
+                        } label: {
+                            Text(column)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(isPicking ? Color.accentColor : .secondary)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!isPicking)
                     }
                 }
                 ForEach(section.rows) { row in
                     GridRow {
-                        Text(row.label)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 28)
+                        // In Select mode, tapping a row letter (k, s, t…) ticks the whole row.
+                        Button {
+                            picking?.toggleAll(row.cells.compactMap { $0?.id })
+                        } label: {
+                            Text(row.label.isEmpty ? "·" : row.label)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(isPicking ? Color.accentColor : .secondary)
+                                .frame(width: 28, height: 40)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!isPicking)
                         ForEach(Array(row.cells.enumerated()), id: \.offset) { _, cell in
                             if let cell {
                                 tile(cell)
@@ -106,10 +134,15 @@ struct KanaChartView: View {
     }
 
     private func tile(_ cell: KanaCell) -> some View {
-        let isSelected = selection == cell
+        let isSelected = !isPicking && selection == cell
+        let isChecked = picking?.contains(cell.id) == true
         return Button {
-            selection = cell
-            onTap(cell)
+            if isPicking {
+                picking?.toggle(cell.id)
+            } else {
+                selection = cell
+                onTap(cell)
+            }
         } label: {
             VStack(spacing: 0) {
                 Text(script.text(cell.hiragana))
@@ -129,6 +162,10 @@ struct KanaChartView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(isSelected ? Color.orange : Color.clear, lineWidth: 2)
             )
+            .overlay(alignment: .bottomTrailing) {
+                if isPicking { SelectionCheckmark(isChecked: isChecked) }
+            }
+            .opacity(isPicking && !isChecked ? 0.75 : 1)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(script.text(cell.hiragana)), \(cell.romaji)")

@@ -19,6 +19,7 @@ final class AppModel {
     let watchSync = WatchSyncController()
     let kanji = KanjiLibrary()
     let kanjiExplainer = KanjiExplainer()
+    let flashSets = FlashSetStore()
 
     var section: AppSection = .write
     /// A word chosen in another section (e.g. My words) for the Write section to show.

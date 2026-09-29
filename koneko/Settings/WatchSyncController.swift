@@ -10,7 +10,12 @@ final class WatchSyncController {
     private(set) var isError = false
 
     /// Call whenever the words or the writing settings change.
-    func update(history: HistoryStore, settings: AppSettings) {
+    private var lastFlashSets: [FlashSet] = []
+
+    /// `flashSets` nil = keep the ones sent last time (e.g. from the "Sync now" button).
+    func update(history: HistoryStore, settings: AppSettings, flashSets: [FlashSet]? = nil) {
+        let flashSets = flashSets ?? lastFlashSets
+        lastFlashSets = flashSets
         guard settings.syncToWatch else { return }
         let snapshot = WatchSnapshot(
             dictionary: DictionaryFile(folders: history.folders, entries: history.entries),
@@ -19,6 +24,7 @@ final class WatchSyncController {
             showRomaji: settings.showRomaji,
             showRomajiInLists: settings.showRomajiInLists,
             showFurigana: settings.showFurigana,
+            flashSets: flashSets,
             source: Self.deviceKind
         )
         do {

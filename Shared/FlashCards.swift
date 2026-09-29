@@ -19,11 +19,14 @@ enum FlashDirection: String, CaseIterable, Identifiable {
 enum FlashDeck: Hashable, Identifiable {
     case kana(KanaScript)
     case kanji(grade: Int)
+    /// A set she made herself.
+    case custom(FlashSet)
 
     var id: String {
         switch self {
         case .kana(let script): script.rawValue
         case .kanji(let grade): "kanji-\(grade)"
+        case .custom(let set): "set-\(set.id.uuidString)"
         }
     }
 
@@ -31,26 +34,40 @@ enum FlashDeck: Hashable, Identifiable {
         switch self {
         case .kana(let script): script.title
         case .kanji(let grade): grade == 7 ? "Kanji · Secondary" : "Kanji · Grade \(grade)"
+        case .custom(let set): set.name
         }
     }
 
     func cards(kanji: KanjiLibrary) -> [FlashCard] {
         switch self {
         case .kana(let script):
-            return KanaChart.allCells.map { cell in
-                FlashCard(japanese: script.text(cell.hiragana), english: cell.romaji, detail: nil, speech: cell.hiragana)
-            }
+            return KanaChart.allCells.map { Self.kanaCard($0, script: script) }
         case .kanji(let grade):
-            return kanji.kanji(grade: grade).map { info in
-                let reading = info.mainReading
-                return FlashCard(
-                    japanese: info.character,
-                    english: info.meanings.prefix(2).joined(separator: ", "),
-                    detail: reading.isEmpty ? nil : "\(reading) · \(JapaneseText.romaji(reading))",
-                    speech: reading
-                )
+            return kanji.kanji(grade: grade).map(Self.kanjiCard)
+        case .custom(let set):
+            switch set.kind {
+            case .hiragana, .katakana:
+                let script: KanaScript = set.kind == .katakana ? .katakana : .hiragana
+                let wanted = Set(set.items)
+                return KanaChart.allCells.filter { wanted.contains($0.id) }.map { Self.kanaCard($0, script: script) }
+            case .kanji:
+                return set.items.compactMap { kanji.info(for: $0) }.map(Self.kanjiCard)
             }
         }
+    }
+
+    private static func kanaCard(_ cell: KanaCell, script: KanaScript) -> FlashCard {
+        FlashCard(japanese: script.text(cell.hiragana), english: cell.romaji, detail: nil, speech: cell.hiragana)
+    }
+
+    private static func kanjiCard(_ info: KanjiInfo) -> FlashCard {
+        let reading = info.mainReading
+        return FlashCard(
+            japanese: info.character,
+            english: info.meanings.prefix(2).joined(separator: ", "),
+            detail: reading.isEmpty ? nil : "\(reading) · \(JapaneseText.romaji(reading))",
+            speech: reading
+        )
     }
 }
 

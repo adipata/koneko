@@ -55,7 +55,7 @@ struct RootView: View {
         .tabViewStyle(.sidebarAdaptable)
         .task { await model.library.load() }
         .onChange(of: watchSyncKey, initial: true) {
-            model.watchSync.update(history: model.history, settings: model.settings)
+            model.watchSync.update(history: model.history, settings: model.settings, flashSets: model.flashSets.sets)
         }
     }
 
@@ -65,7 +65,7 @@ struct RootView: View {
         return [
             "\(model.history.revision)", "\(settings.syncToWatch)", settings.writingStyle.rawValue,
             "\(settings.kanjiLevel)", "\(settings.showRomaji)", "\(settings.showFurigana)",
-            "\(settings.showRomajiInLists)",
+            "\(settings.showRomajiInLists)", "\(model.flashSets.revision)",
         ].joined(separator: "|")
     }
 }

@@ -35,6 +35,9 @@ each character being written stroke by stroke.
 - **Flash cards:** Learn → Flash cards (iPhone/iPad/Mac) and Learn → 🃏 Flash cards (watch):
   endless random cards for hiragana, katakana or the kanji of a grade, 日本語 → English or
   English → 日本語; tap to flip, Next / swipe / Digital Crown for another. No scores.
+  **Sets:** Learn → Select (Photos-style ticks; tap a row/column letter or "Select all" for a
+  group) → Save as set; sets can be started, edited, renamed and deleted from Flash cards, and
+  sync to the watch.
 - **Splash & About:** animated launch splash with the kitten mascot and sakura petals (tap to
   skip; respects Reduce Motion); Settings → About Koneko with version, features and privacy.
   Mascot drawn by `Tools/make_mascot.py`.
