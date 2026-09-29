@@ -99,9 +99,12 @@ struct FlashCard: Identifiable, Equatable {
     let speech: String
 }
 
-/// Picks random cards forever, never the same one twice in a row. No scores, no limit.
+/// Deals cards in random order forever, like a shuffled deck: every card comes once in a random
+/// order, then the deck is reshuffled (never starting with the card that was just shown).
+/// No scores, no limit.
 struct FlashShuffler {
     let cards: [FlashCard]
+    private var pile: [FlashCard] = []
     private var last: String?
 
     init(cards: [FlashCard]) {
@@ -110,10 +113,14 @@ struct FlashShuffler {
 
     mutating func next() -> FlashCard? {
         guard !cards.isEmpty else { return nil }
-        var card = cards.randomElement()!
-        if cards.count > 1 {
-            while card.japanese == last { card = cards.randomElement()! }
+        if pile.isEmpty {
+            pile = cards.shuffled()
+            // Avoid showing the same card twice in a row across reshuffles.
+            if pile.count > 1, pile.last?.japanese == last {
+                pile.swapAt(0, pile.count - 1)
+            }
         }
+        let card = pile.removeLast()
         last = card.japanese
         return card
     }
