@@ -28,24 +28,8 @@ struct KanaStudyView: View {
     }
 
     private var findField: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-            TextField("Type \(script.text("か")) or ka", text: $typed)
-                .autocorrectionDisabled()
-                .focused($fieldFocused)
-                .submitLabel(.search)
-                .onSubmit(find)
-                .onChange(of: typed) { notFound = false }
-            if !typed.isEmpty {
-                Button("Clear", systemImage: "xmark.circle.fill") { typed = "" }
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.secondary)
-                    .buttonStyle(.plain)
-            }
-        }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+        SearchField(prompt: "Type \(script.text("か")) or ka", text: $typed, focus: $fieldFocused, onSubmit: find)
+        .onChange(of: typed) { notFound = false }
         .overlay(alignment: .bottomLeading) {
             if notFound {
                 Text("No character “\(typed)”")
@@ -54,7 +38,7 @@ struct KanaStudyView: View {
                     .offset(y: 18)
             }
         }
-        .frame(maxWidth: 360)
+        .frame(maxWidth: 420)
     }
 
     /// Runs when she presses Return/Search: opens the character, then clears the box and

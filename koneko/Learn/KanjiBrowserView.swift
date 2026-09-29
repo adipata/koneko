@@ -65,26 +65,12 @@ struct KanjiBrowserView: View {
     }
 
     private var searchField: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-            TextField("Search: mountain, やま, yama or 山", text: $searchText)
-                .autocorrectionDisabled()
-                .focused($searchFocused)
-                .submitLabel(.search)
-                .onSubmit { searchFocused = false }
-            if isSearching {
-                Button("Clear", systemImage: "xmark.circle.fill") {
-                    searchText = ""
-                    searchFocused = false
-                }
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.secondary)
-                    .buttonStyle(.plain)
-            }
-        }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+        SearchField(
+            prompt: "Search: mountain, やま, yama or 山",
+            text: $searchText,
+            focus: $searchFocused,
+            onSubmit: { searchFocused = false }
+        )
         .frame(maxWidth: 420)
     }
 

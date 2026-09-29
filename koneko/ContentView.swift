@@ -72,7 +72,7 @@ struct ContentView: View {
     // MARK: Input
 
     private var inputSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 16) {
             Picker("I speak", selection: languageBinding) {
                 Text("🇬🇧 English").tag(InputLanguage.english)
                 Text("🇯🇵 日本語").tag(InputLanguage.japanese)
@@ -80,7 +80,6 @@ struct ContentView: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .frame(maxWidth: 300)
-            .frame(maxWidth: .infinity)
             .disabled(speech.status != .idle)
 
             HoldToTalkButton(speech: speech, language: settings.inputLanguage) { result in
@@ -108,34 +107,48 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
             }
 
-            HStack {
-                TextField(placeholder, text: $input)
-                    .font(.title2)
-                    .textFieldStyle(.roundedBorder)
-                    .autocorrectionDisabled()
-                    .focused($inputFocused)
-                    .submitLabel(.search)
-                    .onSubmit(lookUp)
-                    .id(fieldResetID)
-                    .overlay(alignment: .trailing) {
-                        // Also shown while focused: while the Japanese keyboard is still
-                        // composing (underlined text), `input` may not be updated yet.
-                        if !input.isEmpty || inputFocused {
-                            Button("Clear", systemImage: "xmark.circle.fill", action: clearInput)
-                                .labelStyle(.iconOnly)
-                                .foregroundStyle(.secondary)
-                                .buttonStyle(.plain)
-                                .padding(.trailing, 8)
-                                .help("Clear the word")
-                        }
-                    }
-                Button("Look up", systemImage: "magnifyingglass", action: lookUp)
-                    .labelStyle(.iconOnly)
-                    .font(.title2)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
+            orTypeDivider
+
+            HStack(spacing: 10) {
+                // The clear button also shows while focused: while the Japanese keyboard is
+                // still composing (underlined text), `input` may not be updated yet.
+                SearchField(
+                    prompt: placeholder,
+                    text: $input,
+                    focus: $inputFocused,
+                    onSubmit: lookUp,
+                    onClear: clearInput,
+                    showsClearWhileFocused: true,
+                    resetID: fieldResetID
+                )
+                Button(action: lookUp) {
+                    Image(systemName: "arrow.right")
+                        .font(.title3.weight(.semibold))
+                        .frame(width: 26, height: 26)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.circle)
+                .controlSize(.large)
+                .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
+                .accessibilityLabel("Look up")
+                .help("Look up")
             }
         }
+        .frame(maxWidth: 560)
+        .frame(maxWidth: .infinity)
+    }
+
+    /// A thin "or type" separator between the microphone and the text box.
+    private var orTypeDivider: some View {
+        HStack(spacing: 10) {
+            Rectangle().fill(Color.secondary.opacity(0.25)).frame(height: 1)
+            Text(settings.inputLanguage == .english ? "or type" : "またはタイプ")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .fixedSize()
+            Rectangle().fill(Color.secondary.opacity(0.25)).frame(height: 1)
+        }
+        .frame(maxWidth: 360)
     }
 
     /// Empties the text field and puts the cursor there, ready for a new word.
@@ -170,8 +183,8 @@ struct ContentView: View {
 
     private var placeholder: String {
         switch settings.inputLanguage {
-        case .english: "Type a word in English, e.g. cat"
-        case .japanese: "Type a word in Japanese or romaji"
+        case .english: "Type a word in English"
+        case .japanese: "日本語 or romaji"
         }
     }
 
