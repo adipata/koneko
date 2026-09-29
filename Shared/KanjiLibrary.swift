@@ -45,8 +45,8 @@ final class KanjiLibrary {
     private(set) var all: [KanjiInfo] = []
     private var byCharacter: [String: KanjiInfo] = [:]
 
-    init() {
-        guard let url = Bundle.main.url(forResource: "kanji_info", withExtension: "json")
+    init(loadData: Bool = true) {
+        guard loadData, let url = Bundle.main.url(forResource: "kanji_info", withExtension: "json")
             ?? Bundle.main.url(forResource: "kanji_info", withExtension: "json", subdirectory: "Resources"),
               let data = try? Data(contentsOf: url),
               let raw = try? JSONDecoder().decode([String: Raw].self, from: data)
@@ -60,6 +60,9 @@ final class KanjiLibrary {
         .sorted { ($0.grade, $0.strokes, $0.character) < ($1.grade, $1.strokes, $1.character) }
         byCharacter = Dictionary(uniqueKeysWithValues: all.map { ($0.character, $0) })
     }
+
+    /// A library without data, for decks that don't need kanji (e.g. My words).
+    static let empty = KanjiLibrary(loadData: false)
 
     func info(for character: String) -> KanjiInfo? {
         byCharacter[character]

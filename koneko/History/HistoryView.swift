@@ -62,7 +62,7 @@ struct HistoryView: View {
                         flashDeck = deck
                     }
                     .labelStyle(.titleAndIcon)
-                    .disabled(kanji == nil || { if case .words(_, let words) = deck { words.isEmpty } else { true } }())
+                    .disabled(kanji == nil || deck.cards(kanji: KanjiLibrary.empty).isEmpty)
                     .help("Practise these words with flash cards")
                 }
             }
