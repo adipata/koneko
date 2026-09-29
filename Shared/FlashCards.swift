@@ -47,7 +47,7 @@ enum FlashDeck: Hashable, Identifiable {
         case .kana(let script):
             return KanaChart.allCells.map { Self.kanaCard($0, script: script) }
         case .kanji(let grade):
-            return kanji.kanji(grade: grade).map(Self.kanjiCard)
+            return kanji.kanji(grade: grade).map { Self.kanjiCard($0) }
         case .words(_, let words):
             return words.map { word in
                 let romaji = word.displayRomaji
@@ -67,7 +67,7 @@ enum FlashDeck: Hashable, Identifiable {
                 let wanted = Set(set.items)
                 return KanaChart.allCells.filter { wanted.contains($0.id) }.map { Self.kanaCard($0, script: script) }
             case .kanji:
-                return set.items.compactMap { kanji.info(for: $0) }.map(Self.kanjiCard)
+                return set.items.compactMap { kanji.info(for: $0) }.map { Self.kanjiCard($0) }
             }
         }
     }
