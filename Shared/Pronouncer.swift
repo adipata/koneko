@@ -14,7 +14,7 @@ final class Pronouncer {
 
     private let synthesizer = AVSpeechSynthesizer()
     private let renderer = SpeechRenderer()
-    private var player: AVAudioPlayer?
+    private let player = AudioFilePlayer()
     private var playTask: Task<Void, Never>?
     private(set) var voice: AVSpeechSynthesisVoice?
 
@@ -47,7 +47,6 @@ final class Pronouncer {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         stop()
-        activatePlayback()
 
         let request = SpeechRenderer.Request(
             text: text,
@@ -55,9 +54,11 @@ final class Pronouncer {
             rate: AVSpeechUtteranceDefaultSpeechRate * (slow ? 0.55 : 0.9)
         )
         playTask = Task {
+            await AudioSessionQueue.activatePlayback()
             let file = await renderer.audioFile(for: request)
             guard !Task.isCancelled else { return }
-            if let file, play(file) { return }
+            if let file, await player.play(file) { return }
+            guard !Task.isCancelled else { return }
             speakLive(request)
         }
     }
@@ -76,28 +77,11 @@ final class Pronouncer {
 
     func stop() {
         playTask?.cancel()
-        player?.stop()
+        player.stop()
         synthesizer.stopSpeaking(at: .immediate)
     }
 
     // MARK: Private
-
-    private func activatePlayback() {
-        #if os(iOS) || os(watchOS)
-        // Hold-to-talk switches the session to recording; switch back to playback.
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, mode: .spokenAudio, options: .duckOthers)
-        try? session.setActive(true)
-        #endif
-    }
-
-    private func play(_ url: URL) -> Bool {
-        guard let player = try? AVAudioPlayer(contentsOf: url) else { return false }
-        self.player = player
-        player.prepareToPlay()
-        // A short lead-in gives the audio hardware time to wake up, so the start isn't clipped.
-        return player.play(atTime: player.deviceCurrentTime + 0.12)
-    }
 
     private func speakLive(_ request: SpeechRenderer.Request) {
         let utterance = request.utterance()

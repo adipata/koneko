@@ -92,10 +92,13 @@ nonisolated final class SpeechEngine: @unchecked Sendable {
         let recognizer = try makeRecognizer(locale: locale)
 
         #if os(iOS)
-        let session = AVAudioSession.sharedInstance()
+        // Off the main thread (can block), on the shared audio queue (keeps the order).
         do {
-            try session.setCategory(.record, mode: .measurement, options: .duckOthers)
-            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            try await AudioSessionQueue.run {
+                let session = AVAudioSession.sharedInstance()
+                try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+                try session.setActive(true, options: .notifyOthersOnDeactivation)
+            }
         } catch {
             // e.g. a phone or FaceTime call has priority over us.
             throw StartError.audioBusy((error as NSError).localizedDescription)
@@ -223,7 +226,9 @@ nonisolated final class SpeechEngine: @unchecked Sendable {
         }
         audioEngine.inputNode.removeTap(onBus: 0)
         #if os(iOS)
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        AudioSessionQueue.queue.async {
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
         #endif
     }
 
