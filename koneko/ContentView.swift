@@ -29,6 +29,7 @@ struct ContentView: View {
                     if let word = selectedWord {
                         let shown = settings.display(word)
                         WordCardView(word: shown, showRomaji: settings.showRomaji, showFurigana: settings.showFurigana, original: word)
+                        SaveWordBar(history: history, word: word)
                         strokesSection(for: shown, original: word)
                     }
                 }
