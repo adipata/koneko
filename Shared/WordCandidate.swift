@@ -124,7 +124,7 @@ extension WordCandidate {
 
 extension WordCandidate {
     /// Romaji for each character of `japanese` (same order and count).
-    /// Kana are grouped into syllables (きょ → "kyo" on き, nothing on ょ; っ shows the doubled
+    /// Kana are grouped into syllables (きょ → "kyo" on き, "small yo" on ょ; っ shows the doubled
     /// consonant); a kanji shows the reading of its part in this word.
     nonisolated func romajiPerCharacter() -> [String] {
         let characters = Array(japanese)
@@ -149,6 +149,22 @@ nonisolated extension JapaneseText {
     private static let smallYouon: Set<Character> = ["ゃ", "ゅ", "ょ", "ぁ", "ぃ", "ぅ", "ぇ", "ぉ", "ャ", "ュ", "ョ", "ァ", "ィ", "ゥ", "ェ", "ォ"]
     private static let sokuon: Set<Character> = ["っ", "ッ"]
 
+    /// Small kana and their full-size version: ょ → よ.
+    static let smallToFull: [Character: Character] = [
+        "ゃ": "や", "ゅ": "ゆ", "ょ": "よ", "ぁ": "あ", "ぃ": "い", "ぅ": "う", "ぇ": "え", "ぉ": "お",
+        "ャ": "ヤ", "ュ": "ユ", "ョ": "ヨ", "ァ": "ア", "ィ": "イ", "ゥ": "ウ", "ェ": "エ", "ォ": "オ",
+    ]
+
+    /// "small yo" for ょ.
+    static func smallLabel(_ character: Character) -> String {
+        guard let full = smallToFull[character] else { return "" }
+        return "small " + romaji(String(full))
+    }
+
+    static func isSmallYouon(_ character: Character) -> Bool {
+        smallYouon.contains(character)
+    }
+
     /// Hepburn-style romaji for kana, e.g. がっこう → gakkō.
     static func romaji(_ kana: String) -> String {
         let latin = hiragana(kana).applyingTransform(.toLatin, reverse: false) ?? kana
@@ -161,7 +177,8 @@ nonisolated extension JapaneseText {
         while index < characters.count {
             let character = characters[index]
             if index + 1 < characters.count, smallYouon.contains(characters[index + 1]) {
-                result += [romaji(String(character) + String(characters[index + 1])), ""]
+                // The syllable goes on the big kana; the small one says which small kana it is.
+                result += [romaji(String(character) + String(characters[index + 1])), smallLabel(characters[index + 1])]
                 index += 2
                 continue
             }

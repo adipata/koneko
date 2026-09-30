@@ -237,9 +237,19 @@ extension WordCandidate {
                 if JapaneseText.containsKanji(String(character)) {
                     return part.reading.isEmpty ? String(character) : part.reading
                 }
-                // Small kana and the long-vowel mark don't make sense on their own.
-                if "ゃゅょぁぃぅぇぉっャュョァィゥェォッー".contains(character) || !JapaneseText.isKana(String(character)) {
+                let position = index - offset
+                // A small ゃゅょ… is said together with the kana before it: しょ → "sho".
+                if JapaneseText.isSmallYouon(character) {
+                    guard position > 0, JapaneseText.isKana(String(characters[position - 1])) else { return nil }
+                    return JapaneseText.hiragana(String(characters[position - 1]) + String(character))
+                }
+                // っ and the long-vowel mark don't make sense on their own.
+                if "っッー".contains(character) || !JapaneseText.isKana(String(character)) {
                     return nil
+                }
+                // A kana followed by a small one is one syllable, as its romaji shows.
+                if position + 1 < characters.count, JapaneseText.isSmallYouon(characters[position + 1]) {
+                    return JapaneseText.hiragana(String(character) + String(characters[position + 1]))
                 }
                 return JapaneseText.hiragana(String(character))
             }
