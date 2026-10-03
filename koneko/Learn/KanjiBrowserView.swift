@@ -310,9 +310,9 @@ struct KanjiDetailView: View {
             } else if explainer.loading.contains(info.character) {
                 ProgressView("Asking for a nice explanation…")
             } else if let problem = explainer.errors[info.character] {
-                AIProblemView(problem: problem) {
+                AIProblemView(problem: problem, retry: {
                     Task { await explainer.explain(info, model: model.settings.model) }
-                }
+                })
                 .frame(maxWidth: .infinity)
             } else if !explainer.hasAPIKey {
                 Text("Add an OpenRouter key in Settings to get a friendly explanation with example words.")
