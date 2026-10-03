@@ -49,6 +49,16 @@ struct ContentView: View {
             input = ""
             selectedWord = word
         }
+        .onChange(of: model.textToLookUp, initial: true) {
+            // A word sent from another section (e.g. not a school kanji in Learn).
+            guard let text = model.textToLookUp else { return }
+            model.textToLookUp = nil
+            if !JapaneseText.isJapanese(text) {
+                settings.inputLanguage = .english
+            }
+            input = text
+            lookUp()
+        }
         .onChange(of: selectedWord) {
             guard let word = selectedWord else { return }
             let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)

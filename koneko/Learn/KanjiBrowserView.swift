@@ -33,7 +33,7 @@ struct KanjiBrowserView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     if isCurrent, results.isEmpty {
-                        ContentUnavailableView.search(text: searchText)
+                        notFound(resultsQuery)
                     }
                     grid(results)
                 } else {
@@ -81,6 +81,22 @@ struct KanjiBrowserView: View {
             guard !Task.isCancelled else { return }
             results = found
             resultsQuery = query
+        }
+    }
+
+    /// Nothing among the school kanji: explain why, and offer to look the word up in Write.
+    private func notFound(_ query: String) -> some View {
+        ContentUnavailableView {
+            Label("Not a school kanji", systemImage: "magnifyingglass")
+        } description: {
+            Text("“\(query)” isn't among the 2,136 kanji children learn at school. Words like this are often written in kana, or with a rarer kanji.")
+        } actions: {
+            Button("Look up “\(query)” in Write", systemImage: "pencil.and.scribble") {
+                searchFocused = false
+                model.lookUp(query)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
         }
     }
 

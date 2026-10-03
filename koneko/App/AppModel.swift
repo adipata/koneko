@@ -29,4 +29,12 @@ final class AppModel {
         wordToOpen = word
         section = .write
     }
+
+    /// Text to look up in the Write section (e.g. a word not found in Learn → Kanji).
+    var textToLookUp: String?
+
+    func lookUp(_ text: String) {
+        textToLookUp = text
+        section = .write
+    }
 }
