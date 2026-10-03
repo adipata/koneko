@@ -7,7 +7,7 @@ final class Translator {
         case idle
         case loading
         case results([WordCandidate])
-        case failed(String)
+        case failed(AIProblem)
     }
 
     private(set) var status: Status = .idle
@@ -29,7 +29,7 @@ final class Translator {
             return
         }
         guard let apiKey = Keychain.apiKey, !apiKey.isEmpty else {
-            status = .failed(TranslationError.missingAPIKey.localizedDescription)
+            status = .failed(AIProblem(TranslationError.missingAPIKey))
             return
         }
 
@@ -48,7 +48,7 @@ final class Translator {
                 return
             } catch {
                 guard !Task.isCancelled else { return }
-                status = .failed(error.localizedDescription)
+                status = .failed(AIProblem(error))
             }
         }
     }

@@ -20,7 +20,7 @@ nonisolated struct KanjiExplanation: Codable, Sendable {
 final class KanjiExplainer {
     private(set) var explanations: [String: KanjiExplanation] = [:]
     private(set) var loading: Set<String> = []
-    private(set) var errors: [String: String] = [:]
+    private(set) var errors: [String: AIProblem] = [:]
     private let fileURL: URL
 
     init() {
@@ -55,8 +55,10 @@ final class KanjiExplainer {
                 .filter { JapaneseText.isKana($0.reading) && JapaneseText.isJapanese($0.word) }
             explanations[key] = result
             save()
+        } catch is CancellationError {
+            return
         } catch {
-            errors[key] = error.localizedDescription
+            errors[key] = AIProblem(error)
         }
     }
 

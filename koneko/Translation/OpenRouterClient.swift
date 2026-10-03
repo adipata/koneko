@@ -1,24 +1,35 @@
 import Foundation
 
-nonisolated enum TranslationError: LocalizedError {
+/// Everything that can go wrong when asking the AI (OpenRouter).
+/// `AIProblem` turns each case into a clear message for the screen.
+nonisolated enum TranslationError: LocalizedError, Equatable {
     case missingAPIKey
     case invalidAPIKey
+    /// The OpenRouter account has no credit left (HTTP 402).
     case outOfCredits
+    /// The API key's own spending limit is reached.
+    case keyLimitReached
     case rateLimited
+    /// The chosen model doesn't exist (any more) or has no provider.
+    case modelUnavailable
+    /// OpenRouter or the model's provider is down or overloaded (5xx).
+    case serviceDown
+    /// The request was refused, e.g. by moderation.
+    case refused(String)
     case server(status: Int, message: String)
     case badResponse
+    /// No internet connection at all.
     case offline
+    /// The request took too long.
+    case timedOut
+    /// There is a connection, but OpenRouter can't be reached.
+    case cannotReach
+    /// Another network problem.
+    case network(String)
 
     var errorDescription: String? {
-        switch self {
-        case .missingAPIKey: "Add your OpenRouter API key in Settings first."
-        case .invalidAPIKey: "OpenRouter didn't accept the API key. Check it in Settings."
-        case .outOfCredits: "The OpenRouter account is out of credits."
-        case .rateLimited: "Too many requests right now. Try again in a moment."
-        case .server(let status, let message): "OpenRouter error \(status): \(message)"
-        case .badResponse: "The answer from the AI couldn't be understood. Try again or pick another model."
-        case .offline: "No internet connection. Words you looked up before still work offline."
-        }
+        let problem = AIProblem(self)
+        return "\(problem.title). \(problem.message)"
     }
 }
 
@@ -78,27 +89,71 @@ nonisolated struct OpenRouterClient: Sendable {
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
-        } catch let error as URLError where [.notConnectedToInternet, .networkConnectionLost, .dataNotAllowed].contains(error.code) {
-            throw TranslationError.offline
+        } catch let error as URLError {
+            throw Self.error(for: error)
         }
 
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard status == 200 else {
-            switch status {
-            case 401: throw TranslationError.invalidAPIKey
-            case 402: throw TranslationError.outOfCredits
-            case 429: throw TranslationError.rateLimited
-            default: throw TranslationError.server(status: status, message: Self.errorMessage(in: data))
-            }
+            throw Self.error(status: status, data: data)
         }
 
         let completion = try? JSONDecoder().decode(ChatCompletion.self, from: data)
         guard let content = completion?.choices.first?.message.content,
               let result: Output = Self.decodeJSON(content)
         else {
+            // OpenRouter sometimes answers 200 with an error inside (e.g. the provider failed).
+            if let detail = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                throw Self.error(status: detail.error.code ?? 0, data: data)
+            }
             throw TranslationError.badResponse
         }
         return result
+    }
+
+    private static func error(for error: URLError) -> Error {
+        switch error.code {
+        case .cancelled:
+            return CancellationError()
+        case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed, .internationalRoamingOff, .callIsActive:
+            return TranslationError.offline
+        case .timedOut:
+            return TranslationError.timedOut
+        case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed, .secureConnectionFailed,
+             .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateNotYetValid:
+            return TranslationError.cannotReach
+        default:
+            return TranslationError.network(error.localizedDescription)
+        }
+    }
+
+    /// Maps OpenRouter's HTTP status codes (https://openrouter.ai/docs/api-reference/errors).
+    private static func error(status: Int, data: Data) -> TranslationError {
+        let message = errorMessage(in: data)
+        let lower = message.lowercased()
+        switch status {
+        case 401:
+            return .invalidAPIKey
+        case 402:
+            return .outOfCredits
+        case 403 where lower.contains("limit"):
+            return .keyLimitReached
+        case 403:
+            return .refused(message)
+        case 404:
+            return .modelUnavailable
+        case 400 where lower.contains("model"):
+            return .modelUnavailable
+        case 408:
+            return .timedOut
+        case 429:
+            return .rateLimited
+        case 500...599:
+            return .serviceDown
+        default:
+            if lower.contains("credit") { return .outOfCredits }
+            return .server(status: status, message: message)
+        }
     }
 
     /// Parses the model's JSON, tolerating a surrounding ```json fence.
@@ -129,6 +184,9 @@ private nonisolated struct ChatCompletion: Decodable {
 }
 
 private nonisolated struct ErrorResponse: Decodable {
-    nonisolated struct Detail: Decodable { let message: String }
+    nonisolated struct Detail: Decodable {
+        let message: String
+        let code: Int?
+    }
     let error: Detail
 }

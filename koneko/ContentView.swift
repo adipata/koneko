@@ -239,17 +239,8 @@ struct ContentView: View {
         case .loading:
             ProgressView("Looking it up…")
                 .padding(.top, 24)
-        case .failed(let message):
-            VStack(spacing: 12) {
-                Label(message, systemImage: "exclamationmark.triangle")
-                    .multilineTextAlignment(.center)
-                HStack {
-                    Button("Try again", action: lookUp)
-                    Button("Settings") { model.section = .settings }
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding()
+        case .failed(let problem):
+            AIProblemView(problem: problem, retry: lookUp) { model.section = .settings }
         case .results(let candidates):
             if candidates.isEmpty {
                 Label("I couldn't find a Japanese word for that. Try another word!", systemImage: "questionmark.circle")

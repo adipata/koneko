@@ -200,6 +200,10 @@ Credit any new data in `CreditsView`.
   It can be changed in Settings.
 - Prompts live in `TranslationPrompt` and `KanjiExplainer`. Results must be child-appropriate,
   with an emoji, kana readings per part, and romaji.
+- **Errors:** `OpenRouterClient` maps HTTP status codes and `URLError`s to `TranslationError`.
+  `AIProblem` turns each one into a clear title, message and fixes (Try again, Settings, an
+  openrouter.ai link), and `AIProblemView` shows it. Add new failure cases there rather than
+  showing a raw `localizedDescription`.
 - Only the looked-up words are sent. The privacy text in `AboutView` says so; keep it true.
 
 ## 8. Working conventions
