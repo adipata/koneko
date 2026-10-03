@@ -73,13 +73,40 @@ final class KanjiLibrary {
     }
 
     /// The kanji of a grade in themed groups (grades 1–2) or radical families (grade 3+).
+    /// Cached: the view asks again on every redraw.
     func groups(grade: Int) -> [KanjiGroup] {
-        KanjiGroups.groups(for: kanji(grade: grade), grade: grade)
+        if let cached = groupCache[grade] { return cached }
+        let groups = KanjiGroups.groups(for: kanji(grade: grade), grade: grade)
+        groupCache[grade] = groups
+        return groups
+    }
+
+    // MARK: Search
+
+    /// Search keys for one kanji, worked out once: converting readings to hiragana and romaji
+    /// uses slow text transforms, far too slow to redo for 2,136 kanji on every keystroke.
+    private nonisolated struct SearchEntry: Sendable {
+        let character: String
+        /// Lowercased, without accents.
+        let meanings: [String]
+        /// Readings in hiragana.
+        let kana: [String]
+        /// Readings in romaji, without long-vowel marks.
+        let romaji: [String]
+    }
+
+    @ObservationIgnored private var groupCache: [Int: [KanjiGroup]] = [:]
+    @ObservationIgnored private var searchIndex: [SearchEntry]?
+    @ObservationIgnored private var indexTask: Task<[SearchEntry], Never>?
+
+    /// Builds the search index in the background (call when the kanji page appears).
+    func prepareSearch() async {
+        _ = await loadIndex()
     }
 
     /// Search by meaning (English), reading (kana or romaji) or the kanji itself.
     /// Meanings that start with the query come first.
-    func search(_ query: String, limit: Int = 150) -> [KanjiInfo] {
+    func search(_ query: String, limit: Int = 150) async -> [KanjiInfo] {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return [] }
 
@@ -88,25 +115,53 @@ final class KanjiLibrary {
             return query.compactMap { byCharacter[String($0)] }
         }
 
+        let index = await loadIndex()
         let isKana = JapaneseText.isKana(query)
         let kana = JapaneseText.hiragana(query)
-        let lower = query.lowercased()
-        var best: [KanjiInfo] = []
-        var other: [KanjiInfo] = []
-        for info in all {
-            let readings = (info.kun + info.on).map { JapaneseText.hiragana(KanjiInfo.clean($0)) }
+        let folded = Self.fold(query)
+        var best: [String] = []
+        var other: [String] = []
+        for entry in index {
             if isKana {
-                if readings.contains(kana) { best.append(info) }
-                else if readings.contains(where: { $0.hasPrefix(kana) }) { other.append(info) }
+                if entry.kana.contains(kana) { best.append(entry.character) }
+                else if entry.kana.contains(where: { $0.hasPrefix(kana) }) { other.append(entry.character) }
                 continue
             }
-            if info.meanings.contains(where: { $0.lowercased() == lower || $0.lowercased().hasPrefix(lower + " ") }) {
-                best.append(info)
-            } else if info.meanings.contains(where: { $0.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil })
-                        || readings.contains(where: { JapaneseText.romaji($0).folding(options: .diacriticInsensitive, locale: nil) == lower }) {
-                other.append(info)
+            if entry.meanings.contains(where: { $0 == folded || $0.hasPrefix(folded + " ") }) {
+                best.append(entry.character)
+            } else if entry.meanings.contains(where: { $0.contains(folded) }) || entry.romaji.contains(folded) {
+                other.append(entry.character)
             }
         }
-        return Array((best + other).prefix(limit))
+        return (best + other).prefix(limit).compactMap { byCharacter[$0] }
+    }
+
+    private func loadIndex() async -> [SearchEntry] {
+        if let searchIndex { return searchIndex }
+        let task: Task<[SearchEntry], Never>
+        if let indexTask {
+            task = indexTask
+        } else {
+            let sources = all.map { (character: $0.character, meanings: $0.meanings, readings: $0.kun + $0.on) }
+            task = Task.detached(priority: .userInitiated) {
+                sources.map { source in
+                    let kana = source.readings.map { JapaneseText.hiragana(KanjiInfo.clean($0)) }
+                    return SearchEntry(
+                        character: source.character,
+                        meanings: source.meanings.map(Self.fold),
+                        kana: kana,
+                        romaji: kana.map { Self.fold(JapaneseText.romaji($0)) }
+                    )
+                }
+            }
+            indexTask = task
+        }
+        let index = await task.value
+        searchIndex = index
+        return index
+    }
+
+    private nonisolated static func fold(_ text: String) -> String {
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
     }
 }

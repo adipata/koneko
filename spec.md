@@ -170,6 +170,9 @@ docs/AppleWatch.md      watch setup and run instructions
   pages back to the list.
 - **Furigana:** `FuriganaText` wraps with `FlowLayout` at one consistent font size. Per-part
   `minimumScaleFactor` made mixed sizes and "…" truncation.
+- **Kanji search:** `applyingTransform` (hiragana/romaji) is slow ICU work. Never run it per
+  kanji per keystroke, and never search inside `body`. `KanjiLibrary` builds a search index
+  once in the background, and `KanjiBrowserView` searches in a debounced `.task(id:)`.
 - **Mac:** use `.formStyle(.grouped)` in Settings. On Mac the Keychain falls back to the
   legacy keychain.
 - **Text:** don't concatenate `Text` with `+` (deprecated); use `HStack` or interpolation.

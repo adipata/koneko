@@ -10,6 +10,9 @@ struct KanjiBrowserView: View {
     @State private var searchText = ""
     @FocusState private var searchFocused: Bool
     @State private var selection: KanjiInfo?
+    @State private var results: [KanjiInfo] = []
+    /// The text `results` were found for (they arrive a moment after typing).
+    @State private var resultsQuery = ""
 
     private var library: KanjiLibrary { model.kanji }
 
@@ -25,11 +28,11 @@ struct KanjiBrowserView: View {
                     gradePicker
                 }
                 if isSearching {
-                    let results = library.search(searchText)
-                    Text("\(results.count) found")
+                    let isCurrent = resultsQuery == trimmedSearch
+                    Text(isCurrent ? "\(results.count) found" : "Searching…")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    if results.isEmpty {
+                    if isCurrent, results.isEmpty {
                         ContentUnavailableView.search(text: searchText)
                     }
                     grid(results)
@@ -63,6 +66,26 @@ struct KanjiBrowserView: View {
         } detail: { info in
             KanjiDetailView(model: model, info: info)
         }
+        .task { await library.prepareSearch() }
+        .task(id: trimmedSearch) {
+            let query = trimmedSearch
+            guard !query.isEmpty else {
+                results = []
+                resultsQuery = ""
+                return
+            }
+            // Wait until she pauses typing.
+            try? await Task.sleep(for: .milliseconds(120))
+            guard !Task.isCancelled else { return }
+            let found = await library.search(query)
+            guard !Task.isCancelled else { return }
+            results = found
+            resultsQuery = query
+        }
+    }
+
+    private var trimmedSearch: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func grid(_ kanji: [KanjiInfo]) -> some View {
