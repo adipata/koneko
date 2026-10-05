@@ -29,18 +29,30 @@ struct KanjiBrowserView: View {
                 }
                 if isSearching {
                     let isCurrent = resultsQuery == trimmedSearch
-                    Text(isCurrent ? "\(results.count) found" : "Searching…")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text(isCurrent ? "\(results.count) found" : "Searching…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        if picking != nil, isCurrent, !results.isEmpty {
+                            Spacer()
+                            selectAllButton(results.map(\.character))
+                        }
+                    }
                     if isCurrent, results.isEmpty {
                         notFound(resultsQuery)
                     }
                     grid(results)
                 } else {
                     let groups = library.groups(grade: grade)
-                    Text("\(grade == 7 ? "Secondary school" : "Grade \(grade)"): \(groups.reduce(0) { $0 + $1.kanji.count }) kanji")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text("\(grade == 7 ? "Secondary school" : "Grade \(grade)"): \(groups.reduce(0) { $0 + $1.kanji.count }) kanji")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        if picking != nil {
+                            Spacer()
+                            selectAllButton(groups.flatMap { $0.kanji.map(\.character) }, whole: "grade")
+                        }
+                    }
                     ForEach(groups) { group in
                         VStack(alignment: .leading, spacing: 8) {
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -51,10 +63,7 @@ struct KanjiBrowserView: View {
                                     .foregroundStyle(.secondary)
                                 if picking != nil {
                                     Spacer()
-                                    let ids = group.kanji.map(\.character)
-                                    let allChecked = ids.allSatisfy { picking?.contains($0) == true }
-                                    Button(allChecked ? "Deselect all" : "Select all") { picking?.toggleAll(ids) }
-                                        .font(.subheadline)
+                                    selectAllButton(group.kanji.map(\.character))
                                 }
                             }
                             grid(group.kanji)
@@ -100,6 +109,14 @@ struct KanjiBrowserView: View {
         }
     }
 
+    /// In Select mode: ticks (or unticks) a whole category, grade or list of search results.
+    private func selectAllButton(_ ids: [String], whole: String? = nil) -> some View {
+        let allChecked = picking?.containsAll(.kanji, ids) == true
+        let title = allChecked ? "Deselect all" : "Select all"
+        return Button(whole.map { "\(title) in \($0)" } ?? title) { picking?.toggleAll(.kanji, ids) }
+            .font(.subheadline)
+    }
+
     private var trimmedSearch: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -143,11 +160,11 @@ struct KanjiBrowserView: View {
     private func tile(_ info: KanjiInfo) -> some View {
         let isPicking = picking != nil
         let isSelected = !isPicking && selection == info
-        let isChecked = picking?.contains(info.character) == true
+        let isChecked = picking?.contains(.kanji, info.character) == true
         let emoji = KanjiEmoji.map[info.character] ?? model.kanjiExplainer.explanations[info.character]?.emoji
         return Button {
             if isPicking {
-                picking?.toggle(info.character)
+                picking?.toggle(.kanji, info.character)
             } else {
                 selection = info
                 Pronouncer.shared.speak(info.mainReading)

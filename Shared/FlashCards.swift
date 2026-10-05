@@ -15,11 +15,11 @@ enum FlashDirection: String, CaseIterable, Identifiable {
     }
 }
 
-/// A set of flash cards: one alphabet, or the kanji of one school grade.
+/// A set of flash cards: one alphabet, the kanji of one school grade, her own set, or words.
 enum FlashDeck: Hashable, Identifiable {
     case kana(KanaScript)
     case kanji(grade: Int)
-    /// A set she made herself.
+    /// A set she made herself (it can mix hiragana, katakana and kanji).
     case custom(FlashSet)
     /// Words from My words (a folder, pinned words or all), already in her writing style.
     case words(title: String, words: [WordCandidate])
@@ -61,13 +61,16 @@ enum FlashDeck: Hashable, Identifiable {
                 )
             }
         case .custom(let set):
-            switch set.kind {
-            case .hiragana, .katakana:
-                let script: KanaScript = set.kind == .katakana ? .katakana : .hiragana
-                let wanted = Set(set.items)
-                return KanaChart.allCells.filter { wanted.contains($0.id) }.map { Self.kanaCard($0, script: script) }
-            case .kanji:
-                return set.items.compactMap { kanji.info(for: $0) }.map { Self.kanjiCard($0) }
+            let cells = Dictionary(KanaChart.allCells.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            return set.symbols.compactMap { symbol -> FlashCard? in
+                switch symbol.kind {
+                case .hiragana:
+                    return cells[symbol.value].map { Self.kanaCard($0, script: .hiragana) }
+                case .katakana:
+                    return cells[symbol.value].map { Self.kanaCard($0, script: .katakana) }
+                case .kanji:
+                    return kanji.info(for: symbol.value).map { Self.kanjiCard($0) }
+                }
             }
         }
     }

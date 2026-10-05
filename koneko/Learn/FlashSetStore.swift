@@ -18,21 +18,17 @@ final class FlashSetStore {
         }
     }
 
-    func sets(of kind: FlashSetKind) -> [FlashSet] {
-        sets.filter { $0.kind == kind }
-    }
-
     @discardableResult
-    func add(name: String, kind: FlashSetKind, items: [String]) -> FlashSet {
-        let set = FlashSet(name: Self.clean(name, fallback: "My \(kind.title.lowercased()) set"), kind: kind, items: items)
+    func add(name: String, symbols: [FlashSymbol]) -> FlashSet {
+        let set = FlashSet(name: Self.clean(name, fallback: "My set"), symbols: symbols)
         sets.append(set)
         save()
         return set
     }
 
-    func setItems(_ items: [String], of id: UUID) {
+    func setSymbols(_ symbols: [FlashSymbol], of id: UUID) {
         guard let index = sets.firstIndex(where: { $0.id == id }) else { return }
-        sets[index].items = items
+        sets[index].symbols = symbols
         save()
     }
 
@@ -64,25 +60,43 @@ final class FlashSetStore {
     }
 }
 
-/// "Select" mode in Learn: which symbols are ticked, and whether a set is being edited.
+/// "Select" mode in Learn: which symbols are ticked (across hiragana, katakana and kanji),
+/// and whether a set is being edited.
 struct SymbolSelection: Equatable {
-    var kind: FlashSetKind
-    var items: Set<String> = []
+    var items: Set<FlashSymbol> = []
     /// The set being edited (nil = choosing symbols for a new set).
     var editingSetID: UUID?
 
-    func contains(_ id: String) -> Bool { items.contains(id) }
+    func contains(_ kind: FlashSetKind, _ id: String) -> Bool {
+        items.contains(FlashSymbol(kind: kind, value: id))
+    }
 
-    mutating func toggle(_ id: String) {
-        if items.contains(id) { items.remove(id) } else { items.insert(id) }
+    /// e.g. "5 hiragana · 3 kanji" (empty when nothing is ticked).
+    var summary: String {
+        FlashSetKind.allCases.compactMap { kind in
+            let count = items.filter { $0.kind == kind }.count
+            return count == 0 ? nil : "\(count) \(kind.title.lowercased())"
+        }
+        .joined(separator: " · ")
+    }
+
+    mutating func toggle(_ kind: FlashSetKind, _ id: String) {
+        let symbol = FlashSymbol(kind: kind, value: id)
+        if items.contains(symbol) { items.remove(symbol) } else { items.insert(symbol) }
     }
 
     /// Ticks all of `ids`, or unticks them all if they were already all ticked.
-    mutating func toggleAll(_ ids: [String]) {
-        if ids.allSatisfy(items.contains) {
-            items.subtract(ids)
+    mutating func toggleAll(_ kind: FlashSetKind, _ ids: [String]) {
+        let symbols = ids.map { FlashSymbol(kind: kind, value: $0) }
+        if symbols.allSatisfy(items.contains) {
+            items.subtract(symbols)
         } else {
-            items.formUnion(ids)
+            items.formUnion(symbols)
         }
+    }
+
+    /// Whether every one of `ids` is ticked.
+    func containsAll(_ kind: FlashSetKind, _ ids: [String]) -> Bool {
+        !ids.isEmpty && ids.allSatisfy { contains(kind, $0) }
     }
 }

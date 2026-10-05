@@ -1,27 +1,10 @@
 import SwiftUI
 
-/// Flash-card menu on the watch: direction, then an alphabet, a kanji grade, or one of her sets.
+/// Flash-card menu on the watch: direction, then one of her sets, an alphabet, or a kanji grade.
 struct WatchFlashMenuView: View {
-    /// Her sets, synced from the iPhone/iPad/Mac.
+    /// Her sets (which can mix hiragana, katakana and kanji), synced from the iPhone/iPad/Mac.
     let sets: [FlashSet]
     @AppStorage("flashDirection") private var direction = FlashDirection.japaneseFirst
-
-    private func sets(_ kind: FlashSetKind) -> [FlashSet] {
-        sets.filter { $0.kind == kind }
-    }
-
-    @ViewBuilder
-    private func setLinks(_ kind: FlashSetKind) -> some View {
-        ForEach(sets(kind)) { set in
-            NavigationLink(value: WatchRoute.flash(.custom(set))) {
-                HStack {
-                    Label(set.name, systemImage: "star.fill")
-                    Spacer()
-                    Text("\(set.items.count)").foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
 
     var body: some View {
         List {
@@ -30,16 +13,27 @@ struct WatchFlashMenuView: View {
                     ForEach(FlashDirection.allCases) { Text($0.title).tag($0) }
                 }
             }
+            if !sets.isEmpty {
+                Section("My sets") {
+                    ForEach(sets) { set in
+                        NavigationLink(value: WatchRoute.flash(.custom(set))) {
+                            HStack {
+                                Label(set.name, systemImage: "star.fill")
+                                Spacer()
+                                Text("\(set.symbols.count)").foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
             ForEach(KanaScript.allCases) { script in
                 Section(script.title) {
                     NavigationLink(value: WatchRoute.flash(.kana(script))) {
                         Label("All \(script.title.lowercased())", systemImage: "rectangle.on.rectangle.angled")
                     }
-                    setLinks(script == .hiragana ? .hiragana : .katakana)
                 }
             }
             Section("Kanji") {
-                setLinks(.kanji)
                 ForEach(1...7, id: \.self) { grade in
                     NavigationLink(value: WatchRoute.flash(.kanji(grade: grade))) {
                         Text(grade == 7 ? "All · Secondary school" : "All · Grade \(grade)")

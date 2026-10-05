@@ -36,8 +36,11 @@ each character being written stroke by stroke.
   endless random cards for hiragana, katakana or the kanji of a grade, 日本語 → English or
   English → 日本語; tap to flip, Next / swipe / Digital Crown for another. No scores.
   **Sets:** Learn → Select (Photos-style ticks; tap a row/column letter or "Select all" for a
-  group) → Save as set; sets can be started, edited, renamed and deleted from Flash cards, and
-  sync to the watch.
+  group; for kanji, search results, a category or a whole grade) → Save as set. One set can mix
+  hiragana, katakana and kanji (switch charts while selecting). Sets can be started, edited,
+  renamed and deleted from Flash cards, and sync to the watch.
+  **Word flash cards:** My words → Flash cards → tick one or more folders (or All words /
+  Pinned) → Start; or Select words (across folders) → Actions → Flash cards.
 - **Splash & About:** animated launch splash with the kitten mascot and sakura petals (tap to
   skip; respects Reduce Motion); Settings → About Koneko with version, features and privacy.
   Mascot drawn by `Tools/make_mascot.py`.

@@ -24,14 +24,17 @@ Her main device is an iPad with an Apple Pencil.
   - Chips for All words and 📌 Pinned, plus a 📁 Folders drop-down (new, rename, delete).
   - English/Japanese search.
   - Swipe or context menu per word; Select mode for bulk move, pin and delete.
-  - Flash cards for the current filter.
+  - Flash cards from one or more folders (or All / Pinned), from search results, or from
+    the words ticked in Select mode (`WordFlashPickerView`).
   - Export/import as JSON; delete-all is in Settings.
 - **Learn**:
   - hiragana and katakana charts (basic, ゛゜, combined), with sound, strokes and practice
   - kanji by school grade (1–6, plus 7 = secondary), grouped and searchable, with an AI
     explanation that is cached
   - Flash cards: endless random decks with no scoring
-  - Flash-card **sets**, made through a Photos-style Select mode
+  - Flash-card **sets**, made through a Photos-style Select mode; one set can mix hiragana,
+    katakana and kanji (`FlashSet.symbols`, each a `FlashSymbol` with its kind). Old
+    single-kind sets (`kind` + `items`) still decode.
 - **Settings**:
   - OpenRouter API key (Keychain) and model
   - writing style: as adults write / kanji up to grade N / all hiragana / all katakana
@@ -98,7 +101,8 @@ koneko/                 app target
   Strokes/              StrokeLibrary (koneko/Resources/strokes.json, KanjiVG),
                         StrokeOrderView, TracingView, StrokeMatcher, WordStrokesView
   History/              HistoryStore (My words persistence, folders, bulk ops),
-                        HistoryView (My words UI), SaveWordBar (Pin/folder on Write)
+                        HistoryView (My words UI), SaveWordBar (Pin/folder on Write),
+                        WordFlashPickerView (word flash cards from several folders)
   Learn/                LearnView, KanaStudyView, KanjiBrowserView, KanjiExplainer,
                         KanjiEmoji, FlashCardSessionView, FlashSetsView, FlashSetStore
                         (+ SymbolSelection), SelectionCheckmark, StudySplit
