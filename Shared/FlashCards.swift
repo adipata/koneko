@@ -54,6 +54,8 @@ enum FlashDeck: Hashable, Identifiable {
                 let reading = word.reading
                 let detail = [reading == word.japanese ? "" : reading, romaji].filter { !$0.isEmpty }.joined(separator: " · ")
                 return FlashCard(
+                    // Reading and meaning don't change with her writing style; the written form can.
+                    key: "word:\(word.reading.isEmpty ? word.japanese : word.reading)|\(word.meaning)",
                     japanese: word.japanese,
                     english: [word.emoji, word.meaning].filter { !$0.isEmpty }.joined(separator: " "),
                     detail: detail.isEmpty ? nil : detail,
@@ -76,12 +78,13 @@ enum FlashDeck: Hashable, Identifiable {
     }
 
     private static func kanaCard(_ cell: KanaCell, script: KanaScript) -> FlashCard {
-        FlashCard(japanese: script.text(cell.hiragana), english: cell.romaji, detail: nil, speech: cell.hiragana)
+        FlashCard(key: "kana:\(script.rawValue):\(cell.hiragana)", japanese: script.text(cell.hiragana), english: cell.romaji, detail: nil, speech: cell.hiragana)
     }
 
     private static func kanjiCard(_ info: KanjiInfo) -> FlashCard {
         let reading = info.mainReading
         return FlashCard(
+            key: "kanji:\(info.character)",
             japanese: info.character,
             english: info.meanings.prefix(2).joined(separator: ", "),
             detail: reading.isEmpty ? nil : "\(reading) · \(JapaneseText.romaji(reading))",
@@ -92,6 +95,9 @@ enum FlashDeck: Hashable, Identifiable {
 
 struct FlashCard: Identifiable, Equatable {
     let id = UUID()
+    /// Stays the same for the same symbol or word in every deck, e.g. "kana:hiragana:か",
+    /// "kanji:日", "word:ねこ|cat". Spaced repetition remembers cards by it.
+    let key: String
     /// The kana or kanji.
     let japanese: String
     /// Romaji (kana) or meaning (kanji).
@@ -100,6 +106,11 @@ struct FlashCard: Identifiable, Equatable {
     let detail: String?
     /// What to say aloud.
     let speech: String
+
+    /// Review progress is kept per direction: reading か and recalling it from "ka" are different.
+    func reviewKey(_ direction: FlashDirection) -> String {
+        "\(key)|\(direction.rawValue)"
+    }
 }
 
 /// Deals cards in random order forever, like a shuffled deck: every card comes once in a random

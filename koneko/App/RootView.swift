@@ -49,11 +49,15 @@ struct RootView: View {
                     translator: model.translator,
                     history: model.history,
                     watchSync: model.watchSync,
+                    reviews: model.reviews,
                     isInTab: true
                 )
             }
         }
         .tabViewStyle(.sidebarAdaptable)
+        // Flash-card sessions (opened from Learn and My words) read these.
+        .environment(model.reviews)
+        .environment(model.settings)
         .task { await model.library.load() }
         .onChange(of: watchSyncKey, initial: true) {
             model.watchSync.update(history: model.history, settings: model.settings, flashSets: model.flashSets.sets)

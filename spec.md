@@ -31,7 +31,14 @@ Her main device is an iPad with an Apple Pencil.
   - hiragana and katakana charts (basic, ゛゜, combined), with sound, strokes and practice
   - kanji by school grade (1–6, plus 7 = secondary), grouped and searchable, with an AI
     explanation that is cached
-  - Flash cards: endless random decks with no scoring
+  - Flash cards, in two modes (picked at the top of a session, remembered):
+    - **🌱 Review** (spaced repetition, FSRS): the cards that are due plus a few new ones
+      (Settings → New cards per day, per deck and direction), at most ~20 per session. After
+      turning a card over she answers 😺 I knew it (swipe right) or 🌱 Not yet (swipe left); a
+      missed card comes back a few cards later. Her **garden** (🌱 sprouts, 🌿 growing,
+      🌸 in bloom, from each card's stability) is the visible progress. Ends with "All done for
+      today 🎉" and a Keep practising button.
+    - **🎲 Free practice**: endless random decks, nothing remembered.
   - Flash-card **sets**, made through a Photos-style Select mode; one set can mix hiragana,
     katakana and kanji (`FlashSet.symbols`, each a `FlashSymbol` with its kind). Old
     single-kind sets (`kind` + `items`) still decode.
@@ -39,6 +46,7 @@ Her main device is an iPad with an Apple Pencil.
   - OpenRouter API key (Keychain) and model
   - writing style: as adults write / kanji up to grade N / all hiragana / all katakana
   - furigana, romaji and romaji-in-lists toggles, auto-speak
+  - flash cards: Review mode on/off, new cards per day, reset review progress
   - Apple Watch sync, and export/import of My words
   - About, which contains a personal French note from her father ("Tati"). **Do not
     translate or change it.**
@@ -47,11 +55,13 @@ Her main device is an iPad with an Apple Pencil.
 - **Apple Watch**:
   - My words (folders, pinned, all; dictation search) and a word pager with pronunciation
   - kana list and full-screen characters: Digital Crown for next, swipe to switch script
-  - flash cards, including sets
+  - flash cards, including sets (Free practice only; review progress isn't synced yet)
   - data is read-only and comes from the phone/iPad through iCloud key-value storage
 
 Tone: friendly and simple for a child, with emoji where it helps, and never scoring,
-punishing or pressuring her.
+punishing or pressuring her. Review's "I knew it / Not yet" is private self-assessment for
+scheduling: never show percentages, scores or backlog counts, never use red or ✗ for a miss.
+The garden (counts of plants) is the only progress shown.
 
 ## 2. Platforms and toolchain
 
@@ -104,8 +114,10 @@ koneko/                 app target
                         HistoryView (My words UI), SaveWordBar (Pin/folder on Write),
                         WordFlashPickerView (word flash cards from several folders)
   Learn/                LearnView, KanaStudyView, KanjiBrowserView, KanjiExplainer,
-                        KanjiEmoji, FlashCardSessionView, FlashSetsView, FlashSetStore
-                        (+ SymbolSelection), SelectionCheckmark, StudySplit
+                        KanjiEmoji, FlashCardSessionView (+ FlashMode, GardenRow),
+                        FlashSetsView, FlashSetStore (+ SymbolSelection), ReviewStore
+                        (reviews.json), ReviewDealer (one Review session's queue),
+                        SelectionCheckmark, StudySplit
   Settings/             AppSettings (UserDefaults), Keychain (with macOS legacy fallback),
                         SettingsView, AboutView, WatchSyncController
   Display/              SearchField (shared field style, resetID trick), Clipboard
@@ -116,6 +128,8 @@ Shared/                 both targets
   CloudSync             WatchSnapshot (LZFSE-compressed JSON in NSUbiquitousKeyValueStore,
                         key "koneko.watchSnapshot.v1", ≤ 1 MB)
   FlashCards, FlashSets FlashDeck/FlashCard/FlashShuffler (shuffled deck), FlashSet
+  SRS                   FSRS-5 scheduler (default parameters, Again/Good only), ReviewState,
+                        GardenStage/Garden
   KanaChart, KanjiLibrary, KanjiGroups   kana table, kanji grades/info (Resources/*.json)
   Pronouncer, AudioSessionQueue          TTS (see §5)
   WritingStyle          display transformation + Klee One handwriting font
@@ -138,6 +152,13 @@ docs/AppleWatch.md      watch setup and run instructions
   words by id, keeping the best stars. Keep the format backwards-compatible by making new
   fields optional or giving them defaults.
 - **Flash-card sets** live in `FlashSetStore`, which also has a `revision`.
+- **Review progress** lives in `ReviewStore` → `Application Support/reviews.json`, a
+  `[String: ReviewState]` keyed by `FlashCard.reviewKey(direction)`, e.g.
+  `kana:hiragana:か|japaneseFirst`, `kanji:日|englishFirst`, `word:ねこ|cat|japaneseFirst`
+  (words by reading + meaning, which don't change with the writing style). Keep these keys
+  stable, or progress is lost. It is per device: not synced, not in export/import (yet).
+  `ReviewStore` and `AppSettings` are in the SwiftUI environment (set in `RootView`), which is
+  how `FlashCardSessionView` reads them.
 - **Settings** are in `UserDefaults` via `AppSettings`. The API key is **only** in the
   Keychain. Never commit keys.
 - **Watch sync:**

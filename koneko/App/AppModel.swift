@@ -20,6 +20,7 @@ final class AppModel {
     let kanji = KanjiLibrary()
     let kanjiExplainer = KanjiExplainer()
     let flashSets = FlashSetStore()
+    let reviews = ReviewStore()
 
     var section: AppSection = .write
     /// A word chosen in another section (e.g. My words) for the Write section to show.
