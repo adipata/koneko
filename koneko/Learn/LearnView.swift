@@ -21,6 +21,10 @@ struct LearnView: View {
     /// picker's slide starts before the heavy chart rebuild blocks the main thread.
     @State private var shownPart: Part?
     private var displayedPart: Part { shownPart ?? part }
+    /// TEMPORARY test: when true, the picker only changes a local value and nothing below it
+    /// is drawn, to see the bare slide animation. Set to false (or revert) after testing.
+    private static let pickerTest = true
+    @State private var testPart = Part.hiragana
     /// Shared by both charts, so switching script keeps the same sound selected.
     @State private var selectedKana: KanaCell?
     /// Same key as the grade buttons in the kanji browser, so flash cards use the chosen grade.
@@ -84,7 +88,7 @@ struct LearnView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                Picker("Learn", selection: $part) {
+                Picker("Learn", selection: Self.pickerTest ? $testPart : $part) {
                     ForEach(Part.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
@@ -107,6 +111,9 @@ struct LearnView: View {
                         .padding(.bottom, 4)
                 }
 
+                if Self.pickerTest {
+                    Spacer()
+                } else {
                 switch displayedPart {
                 case .hiragana, .katakana:
                     KanaStudyView(
@@ -119,6 +126,7 @@ struct LearnView: View {
                     }
                 case .kanji:
                     KanjiBrowserView(model: model, picking: $picking)
+                }
                 }
             }
             .navigationTitle("Learn")
