@@ -1,17 +1,275 @@
 import SwiftUI
-import Playgrounds
 
+/// The Write section: say or type a word, see it in Japanese and learn to write it.
 struct ContentView: View {
+    let model: AppModel
+
+    private var library: StrokeLibrary { model.library }
+    private var translator: Translator { model.translator }
+    private var settings: AppSettings { model.settings }
+    private var speech: SpeechInput { model.speech }
+    private var history: HistoryStore { model.history }
+
+    @State private var lastLookupWasJapanese = false
+
+    @State private var input = ""
+    @State private var selectedWord: WordCandidate?
+    /// Other things speech recognition thought she might have said.
+    @State private var heardAlternatives: [String] = []
+    @FocusState private var inputFocused: Bool
+    /// Changing it recreates the text field (see `clearInput`).
+    @State private var fieldResetID = 0
+
     var body: some View {
-        Text("Hello, world!")
-            .padding()
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    inputSection
+                    statusSection
+                    if let word = selectedWord {
+                        let shown = settings.display(word)
+                        WordCardView(word: shown, showRomaji: settings.showRomaji, showFurigana: settings.showFurigana, original: word)
+                        SaveWordBar(history: history, word: word)
+                        strokesSection(for: shown, original: word)
+                    }
+                }
+                .padding()
+                .frame(maxWidth: 720)
+                .frame(maxWidth: .infinity)
+            }
+            .scrollDismissesKeyboard(.immediately)
+            .navigationTitle("Koneko 🐱")
+        }
+        .onChange(of: model.wordToOpen, initial: true) {
+            // A word chosen in My words.
+            guard let word = model.wordToOpen else { return }
+            model.wordToOpen = nil
+            translator.reset()
+            heardAlternatives = []
+            input = ""
+            selectedWord = word
+        }
+        .onChange(of: model.textToLookUp, initial: true) {
+            // A word sent from another section (e.g. not a school kanji in Learn).
+            guard let text = model.textToLookUp else { return }
+            model.textToLookUp = nil
+            if !JapaneseText.isJapanese(text) {
+                settings.inputLanguage = .english
+            }
+            input = text
+            lookUp()
+        }
+        .onChange(of: selectedWord) {
+            guard let word = selectedWord else { return }
+            let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+            history.record(word, lookedUpAs: JapaneseText.isJapanese(typed) ? nil : typed)
+            if settings.speakAutomatically {
+                Pronouncer.shared.speak(word.spokenText)
+            }
+        }
+        .onChange(of: translator.status) {
+            switch translator.status {
+            case .results(let candidates):
+                selectedWord = candidates.first ?? directWordIfJapanese()
+            case .failed where lastLookupWasJapanese:
+                // Offline or AI error: Japanese text can still be shown and practised.
+                selectedWord = directWordIfJapanese()
+            default:
+                break
+            }
+        }
+    }
+
+    // MARK: Input
+
+    private var inputSection: some View {
+        VStack(spacing: 16) {
+            Picker("I speak", selection: languageBinding) {
+                Text("🇬🇧 English").tag(InputLanguage.english)
+                Text("🇯🇵 日本語").tag(InputLanguage.japanese)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 300)
+            .disabled(speech.status != .idle)
+
+            HoldToTalkButton(speech: speech, language: settings.inputLanguage) { result in
+                input = result.text
+                lookUp()
+                heardAlternatives = Array(result.alternatives.prefix(3))
+            }
+            .frame(maxWidth: .infinity)
+
+            if !heardAlternatives.isEmpty {
+                FlowLayout(spacing: 8, lineSpacing: 8) {
+                    Text("Or did you say:")
+                        .foregroundStyle(.secondary)
+                    ForEach(heardAlternatives, id: \.self) { alternative in
+                        Button(alternative) {
+                            // Swap: the word shown now becomes one of the alternatives.
+                            let others = heardAlternatives.map { $0 == alternative ? input : $0 }
+                            input = alternative
+                            lookUp()
+                            heardAlternatives = others
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            orTypeDivider
+
+            HStack(spacing: 10) {
+                // The clear button also shows while focused: while the Japanese keyboard is
+                // still composing (underlined text), `input` may not be updated yet.
+                SearchField(
+                    prompt: placeholder,
+                    text: $input,
+                    focus: $inputFocused,
+                    onSubmit: lookUp,
+                    onClear: clearInput,
+                    showsClearWhileFocused: true,
+                    resetID: fieldResetID
+                )
+                Button(action: lookUp) {
+                    Image(systemName: "arrow.right")
+                        .font(.title3.weight(.semibold))
+                        .frame(width: 26, height: 26)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.circle)
+                .controlSize(.large)
+                .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
+                .accessibilityLabel("Look up")
+                .help("Look up")
+            }
+        }
+        .frame(maxWidth: 560)
+        .frame(maxWidth: .infinity)
+    }
+
+    /// A thin "or type" separator between the microphone and the text box.
+    private var orTypeDivider: some View {
+        HStack(spacing: 10) {
+            Rectangle().fill(Color.secondary.opacity(0.25)).frame(height: 1)
+            Text(settings.inputLanguage == .english ? "or type" : "またはタイプ")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .fixedSize()
+            Rectangle().fill(Color.secondary.opacity(0.25)).frame(height: 1)
+        }
+        .frame(maxWidth: 360)
+    }
+
+    /// Empties the text field and puts the cursor there, ready for a new word.
+    /// The current word stays on screen until the new one is looked up.
+    ///
+    /// With the Japanese keyboard, text that is still being composed (underlined) belongs to the
+    /// keyboard, and iOS ignores `input = ""` for it. Recreating the text field drops that
+    /// half-typed text, then the cursor goes back into the new, empty field.
+    private func clearInput() {
+        inputFocused = false
+        input = ""
+        heardAlternatives = []
+        fieldResetID += 1
+        Task {
+            try? await Task.sleep(for: .milliseconds(150))
+            inputFocused = true
+        }
+    }
+
+    /// The typed/dictated text as a word, if it's already in Japanese script.
+    private func directWordIfJapanese() -> WordCandidate? {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        return lastLookupWasJapanese && JapaneseText.isJapanese(text) ? .direct(text) : nil
+    }
+
+    private var languageBinding: Binding<InputLanguage> {
+        Binding(
+            get: { settings.inputLanguage },
+            set: { settings.inputLanguage = $0; heardAlternatives = [] }
+        )
+    }
+
+    private var placeholder: String {
+        switch settings.inputLanguage {
+        case .english: "Type a word in English"
+        case .japanese: "日本語 or romaji"
+        }
+    }
+
+    private func lookUp() {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        inputFocused = false
+        selectedWord = nil
+        heardAlternatives = []
+        let isJapaneseScript = JapaneseText.isJapanese(text)
+        lastLookupWasJapanese = isJapaneseScript
+        if isJapaneseScript, (Keychain.apiKey ?? "").isEmpty {
+            // Already written in Japanese and no AI available: show it directly.
+            translator.reset()
+            selectedWord = .direct(text)
+        } else {
+            // Japanese text (typed or dictated) still goes to the AI to get the reading,
+            // meaning and emoji, and to offer other words that sound the same.
+            let language: InputLanguage = isJapaneseScript ? .japanese : settings.inputLanguage
+            translator.translate(text, language: language, settings: settings)
+            // Saved words answer instantly, and onChange won't fire if the result is unchanged.
+            if case .results(let candidates) = translator.status {
+                selectedWord = candidates.first
+            }
+        }
+    }
+
+    // MARK: Results
+
+    @ViewBuilder
+    private var statusSection: some View {
+        switch translator.status {
+        case .idle:
+            if selectedWord == nil {
+                ContentUnavailableView(
+                    "What word do you want to write?",
+                    systemImage: "pencil.and.scribble",
+                    description: Text("Say it or type it, and I'll show you how to write it in Japanese.")
+                )
+            }
+        case .loading:
+            ProgressView("Looking it up…")
+                .padding(.top, 24)
+        case .failed(let problem):
+            AIProblemView(problem: problem, retry: lookUp) { model.section = .settings }
+        case .results(let candidates):
+            if candidates.isEmpty {
+                Label("I couldn't find a Japanese word for that. Try another word!", systemImage: "questionmark.circle")
+            } else if candidates.count > 1 {
+                CandidatePicker(candidates: candidates, selection: $selectedWord)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func strokesSection(for word: WordCandidate, original: WordCandidate) -> some View {
+        switch library.loadState {
+        case .loading:
+            ProgressView("Loading strokes…")
+        case .failed(let message):
+            ContentUnavailableView(
+                "Couldn't load stroke data",
+                systemImage: "exclamationmark.triangle",
+                description: Text(message)
+            )
+        case .ready:
+            WordStrokesView(word: word, library: library, speaksOnTap: settings.speakAutomatically, showRomaji: settings.showRomaji) { character, stars in
+                history.recordStars(stars, for: character, in: original)
+            }
+            .id(word.id)
+        }
     }
 }
 
 #Preview {
-    ContentView()
-}
-
-#Playground {
-    _ = 1 + 2
+    RootView()
 }
