@@ -18,6 +18,8 @@ struct HistoryView: View {
     @State private var filter = Filter.all
     @State private var searchText = ""
     @State private var flashDeck: FlashDeck?
+    /// Choosing folders for word flash cards.
+    @State private var showWordFlashPicker = false
     /// Select mode: the ids of the ticked words (nil = not selecting).
     @State private var picking: Set<String>?
     @State private var confirmDeleteSelected = false
@@ -66,13 +68,15 @@ struct HistoryView: View {
                             .help("Select several words, e.g. to put them in a folder")
                     }
                     ToolbarItem(placement: .primaryAction) {
+                        let isSearching = !searchText.trimmingCharacters(in: .whitespaces).isEmpty
                         let deck = currentDeck
                         Button("Flash cards", systemImage: "rectangle.on.rectangle.angled") {
-                            flashDeck = deck
+                            // Search results start straight away; otherwise choose folders first.
+                            if isSearching { flashDeck = deck } else { showWordFlashPicker = true }
                         }
                         .labelStyle(.titleAndIcon)
-                        .disabled(kanji == nil || deck.cards(kanji: KanjiLibrary.empty).isEmpty)
-                        .help("Practise these words with flash cards")
+                        .disabled(kanji == nil || (isSearching ? deck.cards(kanji: KanjiLibrary.empty).isEmpty : history.entries.isEmpty))
+                        .help("Practise words with flash cards, from one folder or several")
                     }
                 } else {
                     ToolbarItem(placement: .primaryAction) {
@@ -107,6 +111,11 @@ struct HistoryView: View {
                         #endif
                 }
             }
+            .sheet(isPresented: $showWordFlashPicker) {
+                if let kanji {
+                    WordFlashPickerView(history: history, style: style, kanji: kanji, sources: [flashSource])
+                }
+            }
             .alert(renamingFolder == nil ? "New folder" : "Rename folder", isPresented: $showFolderNameAlert) {
                 TextField("e.g. 🐾 Animals", text: $folderName)
                 Button("Cancel", role: .cancel) { resetFolderEditing() }
@@ -128,6 +137,15 @@ struct HistoryView: View {
             } message: {
                 Text("The words stay in “All words”.")
             }
+        }
+    }
+
+    /// The list on screen, ticked first when choosing words for flash cards.
+    private var flashSource: WordFlashSource {
+        switch filter {
+        case .all: .all
+        case .pinned: .pinned
+        case .folder(let id): .folder(id)
         }
     }
 
@@ -248,6 +266,11 @@ struct HistoryView: View {
                     history.setPinned(ids, !allPinned)
                     picking = nil
                 }
+                Button("Flash cards", systemImage: "rectangle.on.rectangle.angled") {
+                    let title = ids.count == 1 ? "1 chosen word" : "\(ids.count) chosen words"
+                    flashDeck = .words(title: title, words: selected.map { style($0.word) })
+                }
+                .disabled(kanji == nil)
                 Divider()
                 Button("Delete…", systemImage: "trash", role: .destructive) { confirmDeleteSelected = true }
             } label: {

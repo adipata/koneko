@@ -15,11 +15,11 @@ enum FlashDirection: String, CaseIterable, Identifiable {
     }
 }
 
-/// A set of flash cards: one alphabet, or the kanji of one school grade.
+/// A set of flash cards: one alphabet, the kanji of one school grade, her own set, or words.
 enum FlashDeck: Hashable, Identifiable {
     case kana(KanaScript)
     case kanji(grade: Int)
-    /// A set she made herself.
+    /// A set she made herself (it can mix hiragana, katakana and kanji).
     case custom(FlashSet)
     /// Words from My words (a folder, pinned words or all), already in her writing style.
     case words(title: String, words: [WordCandidate])
@@ -54,6 +54,8 @@ enum FlashDeck: Hashable, Identifiable {
                 let reading = word.reading
                 let detail = [reading == word.japanese ? "" : reading, romaji].filter { !$0.isEmpty }.joined(separator: " · ")
                 return FlashCard(
+                    // Reading and meaning don't change with her writing style; the written form can.
+                    key: "word:\(word.reading.isEmpty ? word.japanese : word.reading)|\(word.meaning)",
                     japanese: word.japanese,
                     english: [word.emoji, word.meaning].filter { !$0.isEmpty }.joined(separator: " "),
                     detail: detail.isEmpty ? nil : detail,
@@ -61,24 +63,28 @@ enum FlashDeck: Hashable, Identifiable {
                 )
             }
         case .custom(let set):
-            switch set.kind {
-            case .hiragana, .katakana:
-                let script: KanaScript = set.kind == .katakana ? .katakana : .hiragana
-                let wanted = Set(set.items)
-                return KanaChart.allCells.filter { wanted.contains($0.id) }.map { Self.kanaCard($0, script: script) }
-            case .kanji:
-                return set.items.compactMap { kanji.info(for: $0) }.map { Self.kanjiCard($0) }
+            let cells = Dictionary(KanaChart.allCells.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            return set.symbols.compactMap { symbol -> FlashCard? in
+                switch symbol.kind {
+                case .hiragana:
+                    return cells[symbol.value].map { Self.kanaCard($0, script: .hiragana) }
+                case .katakana:
+                    return cells[symbol.value].map { Self.kanaCard($0, script: .katakana) }
+                case .kanji:
+                    return kanji.info(for: symbol.value).map { Self.kanjiCard($0) }
+                }
             }
         }
     }
 
     private static func kanaCard(_ cell: KanaCell, script: KanaScript) -> FlashCard {
-        FlashCard(japanese: script.text(cell.hiragana), english: cell.romaji, detail: nil, speech: cell.hiragana)
+        FlashCard(key: "kana:\(script.rawValue):\(cell.hiragana)", japanese: script.text(cell.hiragana), english: cell.romaji, detail: nil, speech: cell.hiragana)
     }
 
     private static func kanjiCard(_ info: KanjiInfo) -> FlashCard {
         let reading = info.mainReading
         return FlashCard(
+            key: "kanji:\(info.character)",
             japanese: info.character,
             english: info.meanings.prefix(2).joined(separator: ", "),
             detail: reading.isEmpty ? nil : "\(reading) · \(JapaneseText.romaji(reading))",
@@ -89,6 +95,9 @@ enum FlashDeck: Hashable, Identifiable {
 
 struct FlashCard: Identifiable, Equatable {
     let id = UUID()
+    /// Stays the same for the same symbol or word in every deck, e.g. "kana:hiragana:か",
+    /// "kanji:日", "word:ねこ|cat". Spaced repetition remembers cards by it.
+    let key: String
     /// The kana or kanji.
     let japanese: String
     /// Romaji (kana) or meaning (kanji).
@@ -97,6 +106,11 @@ struct FlashCard: Identifiable, Equatable {
     let detail: String?
     /// What to say aloud.
     let speech: String
+
+    /// Review progress is kept per direction: reading か and recalling it from "ka" are different.
+    func reviewKey(_ direction: FlashDirection) -> String {
+        "\(key)|\(direction.rawValue)"
+    }
 }
 
 /// Deals cards in random order forever, like a shuffled deck: every card comes once in a random

@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// Flash cards menu for one kind (hiragana, katakana or kanji): the default "all" deck and
-/// her own sets, which can be started, edited, renamed and deleted.
+/// Flash cards menu: whole hiragana, katakana or a kanji grade, and her own sets (which can mix
+/// all three), which can be started, edited, renamed and deleted.
 struct FlashSetsView: View {
-    let kind: FlashSetKind
     let kanjiGrade: Int
     let store: FlashSetStore
     let kanji: KanjiLibrary
@@ -16,34 +15,27 @@ struct FlashSetsView: View {
     @State private var newName = ""
     @State private var deleting: FlashSet?
 
-    private var defaultDeck: FlashDeck {
-        switch kind {
-        case .hiragana: .kana(.hiragana)
-        case .katakana: .kana(.katakana)
-        case .kanji: .kanji(grade: kanjiGrade)
-        }
-    }
-
-    private var defaultTitle: String {
-        switch kind {
-        case .hiragana: "All hiragana"
-        case .katakana: "All katakana"
-        case .kanji: kanjiGrade == 7 ? "All kanji · Secondary" : "All kanji · Grade \(kanjiGrade)"
-        }
-    }
-
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    row(title: defaultTitle, count: defaultDeck.cards(kanji: kanji).count, icon: "square.stack.3d.up.fill") {
-                        activeDeck = defaultDeck
+                    wholeRow("All hiragana", deck: .kana(.hiragana))
+                    wholeRow("All katakana", deck: .kana(.katakana))
+                    wholeRow(kanjiGrade == 7 ? "All kanji · Secondary" : "All kanji · Grade \(kanjiGrade)", deck: .kanji(grade: kanjiGrade))
+                    Menu {
+                        ForEach(1...7, id: \.self) { grade in
+                            Button(grade == 7 ? "Secondary school" : "Grade \(grade)") {
+                                activeDeck = .kanji(grade: grade)
+                            }
+                        }
+                    } label: {
+                        Label("Kanji of another grade…", systemImage: "square.stack.3d.up")
                     }
                 }
 
                 Section {
-                    ForEach(store.sets(of: kind)) { set in
-                        row(title: set.name, count: set.items.count, icon: "rectangle.on.rectangle.angled") {
+                    ForEach(store.sets) { set in
+                        row(title: set.name, subtitle: set.summary, count: set.symbols.count, icon: "rectangle.on.rectangle.angled") {
                             activeDeck = .custom(set)
                         }
                         .swipeActions(edge: .trailing) {
@@ -65,10 +57,10 @@ struct FlashSetsView: View {
                 } header: {
                     Text("My sets")
                 } footer: {
-                    Text("Tap New set, then tick the symbols in the chart, like selecting photos. Tap a row letter (k, s…) or column (a, i…) to tick a whole row or column. Long-press a set to edit, rename or delete it.")
+                    Text("Tap New set, then tick the symbols, like selecting photos. Switch between Hiragana, Katakana and Kanji to mix them in one set. Tap a row letter (k, s…) or column (a, i…) to tick a whole row or column; for kanji, search or tick a whole category. Long-press a set to edit, rename or delete it.")
                 }
             }
-            .navigationTitle("🃏 \(kind.title) flash cards")
+            .navigationTitle("🃏 Flash cards")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -109,10 +101,28 @@ struct FlashSetsView: View {
         #endif
     }
 
-    private func row(title: String, count: Int, icon: String, start: @escaping () -> Void) -> some View {
+    /// A whole-group deck: all hiragana, all katakana, or the kanji of the chosen grade.
+    private func wholeRow(_ title: String, deck: FlashDeck) -> some View {
+        row(title: title, count: deck.cards(kanji: kanji).count, icon: "square.stack.3d.up.fill") {
+            activeDeck = deck
+        }
+    }
+
+    private func row(title: String, subtitle: String? = nil, count: Int, icon: String, start: @escaping () -> Void) -> some View {
         Button(action: start) {
             HStack {
-                Label(title, systemImage: icon)
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                        if let subtitle, !subtitle.isEmpty {
+                            Text(subtitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } icon: {
+                    Image(systemName: icon)
+                }
                 Spacer()
                 Text("\(count)")
                     .foregroundStyle(.secondary)
@@ -136,6 +146,8 @@ struct FlashSetsView: View {
 /// Bar shown at the bottom in Select mode: Cancel · "12 selected" · Save.
 struct SelectionBar: View {
     let count: Int
+    /// e.g. "5 hiragana · 3 kanji".
+    var detail: String = ""
     let isEditing: Bool
     let cancel: () -> Void
     let clear: () -> Void
@@ -149,6 +161,12 @@ struct SelectionBar: View {
                 Text(count == 1 ? "1 selected" : "\(count) selected")
                     .font(.headline)
                     .monospacedDigit()
+                if !detail.isEmpty {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
                 if count > 0 {
                     Button("Clear", action: clear)
                         .font(.caption)

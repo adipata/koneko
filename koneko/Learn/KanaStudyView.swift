@@ -75,6 +75,7 @@ struct KanaChartView: View {
     let onTap: (KanaCell) -> Void
 
     private var isPicking: Bool { picking != nil }
+    private var kind: FlashSetKind { script == .katakana ? .katakana : .hiragana }
     private var allIDs: [String] { section.rows.flatMap { $0.cells.compactMap { $0?.id } } }
 
     var body: some View {
@@ -84,8 +85,8 @@ struct KanaChartView: View {
                     .font(.headline)
                 Spacer()
                 if isPicking {
-                    let allChecked = allIDs.allSatisfy { picking?.contains($0) == true }
-                    Button(allChecked ? "Deselect all" : "Select all") { picking?.toggleAll(allIDs) }
+                    let allChecked = picking?.containsAll(kind, allIDs) == true
+                    Button(allChecked ? "Deselect all" : "Select all") { picking?.toggleAll(kind, allIDs) }
                         .font(.subheadline)
                 }
             }
@@ -95,7 +96,7 @@ struct KanaChartView: View {
                     ForEach(Array(section.columns.enumerated()), id: \.offset) { index, column in
                         // In Select mode, tapping a column letter (a, i, u…) ticks the whole column.
                         Button {
-                            picking?.toggleAll(section.rows.compactMap { $0.cells.indices.contains(index) ? $0.cells[index]?.id : nil })
+                            picking?.toggleAll(kind, section.rows.compactMap { $0.cells.indices.contains(index) ? $0.cells[index]?.id : nil })
                         } label: {
                             Text(column)
                                 .font(.caption.weight(.semibold))
@@ -110,7 +111,7 @@ struct KanaChartView: View {
                     GridRow {
                         // In Select mode, tapping a row letter (k, s, t…) ticks the whole row.
                         Button {
-                            picking?.toggleAll(row.cells.compactMap { $0?.id })
+                            picking?.toggleAll(kind, row.cells.compactMap { $0?.id })
                         } label: {
                             Text(row.label.isEmpty ? "·" : row.label)
                                 .font(.caption.weight(.semibold))
@@ -135,10 +136,10 @@ struct KanaChartView: View {
 
     private func tile(_ cell: KanaCell) -> some View {
         let isSelected = !isPicking && selection == cell
-        let isChecked = picking?.contains(cell.id) == true
+        let isChecked = picking?.contains(kind, cell.id) == true
         return Button {
             if isPicking {
-                picking?.toggle(cell.id)
+                picking?.toggle(kind, cell.id)
             } else {
                 selection = cell
                 onTap(cell)

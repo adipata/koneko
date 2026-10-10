@@ -6,6 +6,7 @@ struct SettingsView: View {
     let translator: Translator
     let history: HistoryStore
     let watchSync: WatchSyncController
+    let reviews: ReviewStore
     /// Shown as a tab/sidebar section (no Done button) rather than a sheet.
     var isInTab = false
 
@@ -17,6 +18,7 @@ struct SettingsView: View {
     @State private var showCredits = false
     @State private var confirmClear = false
     @State private var confirmDeleteWords = false
+    @State private var confirmResetReviews = false
     @State private var exportDocument: DictionaryDocument?
     @State private var showImporter = false
     @State private var pendingImport: Data?
@@ -133,6 +135,23 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Toggle("Review mode (spaced repetition)", isOn: $settings.smartReview)
+                    if settings.smartReview {
+                        Stepper(value: $settings.newCardsPerDay, in: 0...30) {
+                            LabeledContent("New cards per day", value: "\(settings.newCardsPerDay)")
+                        }
+                        Button("Reset review progress…", role: .destructive) {
+                            confirmResetReviews = true
+                        }
+                        .disabled(reviews.states.isEmpty)
+                    }
+                } header: {
+                    Text("Flash cards")
+                } footer: {
+                    Text("Review brings back each card just before she would forget it: cards she knows come back after days or weeks, new or tricky ones sooner. Free practice (random cards, nothing remembered) is always there too. New cards per day counts per deck and direction.")
+                }
+
+                Section {
                     Toggle("Say words automatically", isOn: $settings.speakAutomatically)
                     LabeledContent("Japanese voice", value: pronouncer.voiceDescription)
                     Button("Test voice") {
@@ -213,6 +232,15 @@ struct SettingsView: View {
             }
             .onDisappear { saveKey() }
             .sheet(isPresented: $showCredits) { CreditsView() }
+            .confirmationDialog(
+                "Reset review progress?",
+                isPresented: $confirmResetReviews,
+                titleVisibility: .visible
+            ) {
+                Button("Reset progress", role: .destructive) { reviews.removeAll() }
+            } message: {
+                Text("Every flash card starts again as a new card and her garden is cleared. Her words and sets are kept.")
+            }
             .confirmationDialog("Forget all saved translations?", isPresented: $confirmClear) {
                 Button("Forget saved translations", role: .destructive) { translator.clearCache() }
             }

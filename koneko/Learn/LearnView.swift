@@ -37,20 +37,23 @@ struct LearnView: View {
 
     // MARK: Sets
 
-    /// Opens Select mode for a set (nil = new set), in the right chart.
+    /// Opens Select mode for a set (nil = new set). Editing a set opens the chart of its
+    /// first kind if the current one isn't in it.
     private func startPicking(for set: FlashSet?) {
         if let set {
-            part = set.kind == .hiragana ? .hiragana : set.kind == .katakana ? .katakana : .kanji
-            picking = SymbolSelection(kind: set.kind, items: Set(set.items), editingSetID: set.id)
+            if !set.kinds.contains(currentKind), let first = set.kinds.first {
+                part = first == .hiragana ? .hiragana : first == .katakana ? .katakana : .kanji
+            }
+            picking = SymbolSelection(items: Set(set.symbols), editingSetID: set.id)
         } else {
-            picking = SymbolSelection(kind: currentKind)
+            picking = SymbolSelection()
         }
     }
 
     private func saveSelection() {
         guard let picking else { return }
         if let id = picking.editingSetID {
-            model.flashSets.setItems(orderedItems(picking), of: id)
+            model.flashSets.setSymbols(orderedSymbols(picking), of: id)
             self.picking = nil
         } else {
             newSetName = ""
@@ -60,19 +63,18 @@ struct LearnView: View {
 
     private func saveNewSet() {
         guard let picking else { return }
-        model.flashSets.add(name: newSetName, kind: picking.kind, items: orderedItems(picking))
+        model.flashSets.add(name: newSetName, symbols: orderedSymbols(picking))
         self.picking = nil
         showFlashSets = true
     }
 
-    /// Items in chart / grade order, not in tapping order.
-    private func orderedItems(_ picking: SymbolSelection) -> [String] {
-        switch picking.kind {
-        case .hiragana, .katakana:
-            KanaChart.allCells.map(\.id).filter(picking.items.contains)
-        case .kanji:
-            model.kanji.all.map(\.character).filter(picking.items.contains)
-        }
+    /// Symbols in chart / grade order (hiragana, then katakana, then kanji), not in tapping order.
+    private func orderedSymbols(_ picking: SymbolSelection) -> [FlashSymbol] {
+        let kana = KanaChart.allCells.map(\.id)
+        let hiragana = kana.map { FlashSymbol(kind: .hiragana, value: $0) }
+        let katakana = kana.map { FlashSymbol(kind: .katakana, value: $0) }
+        let kanji = model.kanji.all.map { FlashSymbol(kind: .kanji, value: $0.character) }
+        return (hiragana + katakana + kanji).filter { picking.items.contains($0) }
     }
 
     var body: some View {
@@ -86,7 +88,15 @@ struct LearnView: View {
                 .frame(maxWidth: 480)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
-                .disabled(picking != nil)
+
+                if picking != nil {
+                    Text("A set can mix hiragana, katakana and kanji: switch above to tick more.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                        .padding(.bottom, 4)
+                }
 
                 switch part {
                 case .hiragana, .katakana:
@@ -110,7 +120,7 @@ struct LearnView: View {
                 if picking == nil {
                     ToolbarItem(placement: .primaryAction) {
                         Button("Select", systemImage: "checkmark.circle") {
-                            picking = SymbolSelection(kind: currentKind)
+                            picking = SymbolSelection()
                         }
                         .help("Select symbols for a flash-card set")
                     }
@@ -126,6 +136,7 @@ struct LearnView: View {
                 if let picking {
                     SelectionBar(
                         count: picking.items.count,
+                        detail: picking.summary,
                         isEditing: picking.editingSetID != nil,
                         cancel: { self.picking = nil },
                         clear: { self.picking?.items.removeAll() },
@@ -135,7 +146,6 @@ struct LearnView: View {
             }
             .sheet(isPresented: $showFlashSets) {
                 FlashSetsView(
-                    kind: currentKind,
                     kanjiGrade: kanjiGrade,
                     store: model.flashSets,
                     kanji: model.kanji
@@ -148,7 +158,7 @@ struct LearnView: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Save") { saveNewSet() }
             } message: {
-                Text("\(picking?.items.count ?? 0) symbols")
+                Text(picking?.summary ?? "")
             }
         }
     }

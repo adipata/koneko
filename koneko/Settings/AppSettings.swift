@@ -26,6 +26,8 @@ final class AppSettings {
         static let writingStyle = "writingStyle"
         static let kanjiLevel = "kanjiLevel"
         static let showFurigana = "showFurigana"
+        static let smartReview = "smartReview"
+        static let newCardsPerDay = "newCardsPerDay"
     }
 
     private let defaults = UserDefaults.standard
@@ -69,6 +71,16 @@ final class AppSettings {
         didSet { defaults.set(showFurigana, forKey: Keys.showFurigana) }
     }
 
+    /// Flash cards offer Review (spaced repetition) as well as Free practice.
+    var smartReview: Bool {
+        didSet { defaults.set(smartReview, forKey: Keys.smartReview) }
+    }
+
+    /// How many cards she hasn't met yet Review adds per deck each day.
+    var newCardsPerDay: Int {
+        didSet { defaults.set(newCardsPerDay, forKey: Keys.newCardsPerDay) }
+    }
+
     /// The word as it should appear on screen with the current writing settings.
     func display(_ word: WordCandidate) -> WordCandidate {
         writingStyle.apply(to: word, kanjiLevel: kanjiLevel)
@@ -84,5 +96,7 @@ final class AppSettings {
         writingStyle = defaults.string(forKey: Keys.writingStyle).flatMap { WritingStyle(rawValue: $0) } ?? .schoolLevel
         kanjiLevel = defaults.object(forKey: Keys.kanjiLevel) as? Int ?? 1
         showFurigana = defaults.object(forKey: Keys.showFurigana) as? Bool ?? true
+        smartReview = defaults.object(forKey: Keys.smartReview) as? Bool ?? true
+        newCardsPerDay = defaults.object(forKey: Keys.newCardsPerDay) as? Int ?? 8
     }
 }
