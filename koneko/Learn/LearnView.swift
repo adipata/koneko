@@ -17,6 +17,10 @@ struct LearnView: View {
     }
 
     @AppStorage("learnPart") private var part = Part.hiragana
+    /// The section whose content is on screen. Follows `part` a moment later, so the
+    /// picker's slide starts before the heavy chart rebuild blocks the main thread.
+    @State private var shownPart: Part?
+    private var displayedPart: Part { shownPart ?? part }
     /// Shared by both charts, so switching script keeps the same sound selected.
     @State private var selectedKana: KanaCell?
     /// Same key as the grade buttons in the kanji browser, so flash cards use the chosen grade.
@@ -88,6 +92,11 @@ struct LearnView: View {
                 .frame(maxWidth: 480)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
+                .task(id: part) {
+                    try? await Task.sleep(for: .milliseconds(50))
+                    guard !Task.isCancelled else { return }
+                    shownPart = part
+                }
 
                 if picking != nil {
                     Text("A set can mix hiragana, katakana and kanji: switch above to tick more.")
@@ -98,11 +107,11 @@ struct LearnView: View {
                         .padding(.bottom, 4)
                 }
 
-                switch part {
+                switch displayedPart {
                 case .hiragana, .katakana:
                     KanaStudyView(
                         model: model,
-                        script: part == .katakana ? .katakana : .hiragana,
+                        script: displayedPart == .katakana ? .katakana : .hiragana,
                         selection: $selectedKana,
                         picking: $picking
                     ) { script in
