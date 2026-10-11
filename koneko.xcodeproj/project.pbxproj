@@ -358,6 +358,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Koneko;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Koneko reads the words in a photo you take so it can show you how to write them in Japanese.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Koneko listens to the word you say so it can show you how to write it in Japanese.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Koneko turns the word you say into text to find it in Japanese.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -405,6 +406,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Koneko;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Koneko reads the words in a photo you take so it can show you how to write them in Japanese.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Koneko listens to the word you say so it can show you how to write it in Japanese.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Koneko turns the word you say into text to find it in Japanese.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

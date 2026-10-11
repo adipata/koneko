@@ -12,6 +12,12 @@ Her main device is an iPad with an Apple Pencil.
 - **Write** (main screen): she says or types a word.
   - Hold-to-talk works in English or 日本語, with a segmented switch. Typing uses a search
     field with an ➜ button.
+  - 📷 Words from a photo (iPhone/iPad only, `Photo/`): take or choose a photo. Printed text
+    is read on the device with VisionKit Live Text (`ImageAnalyzer`, ja + en) and she selects
+    the words; handwriting is cropped (`PhotoCropView`) and only the crop is sent to the AI
+    (`HandwritingReader`, image input via `requestJSON(imageJPEG:)`, using
+    `AppSettings.imageModel`, which skips models that can't read images). The text then goes
+    into the field and is looked up.
   - English is translated through OpenRouter, which returns several candidates.
   - Japanese typed directly is shown as is, with no AI call if it's offline.
   - The word card shows:
@@ -26,6 +32,12 @@ Her main device is an iPad with an Apple Pencil.
   - Swipe or context menu per word; Select mode for bulk move, pin and delete.
   - Flash cards from one or more folders (or All / Pinned), from search results, or from
     the words ticked in Select mode (`WordFlashPickerView`).
+  - In English → 日本語 flash cards (word decks here, and the kana/kanji/set decks in Learn),
+    📷 **Check my writing** (iPhone/iPad only), next to the speaker under the card: she writes the word on paper, takes or chooses a photo, frames it, and the AI
+    (`HandwritingCoach`, `settings.imageModel`) returns advice shown in a box: what it read,
+    whether it's the right word, the word as a whole (missing/wrong characters, small kana,
+    ゛゜, long vowels), then each character's form. No stroke-order guesses. Words accept
+    hiragana for kanji; Learn cards need exactly that kana or kanji (`isWord`).
   - Export/import as JSON; delete-all is in Settings.
 - **Learn**:
   - hiragana and katakana charts (basic, ゛゜, combined), with sound, strokes and practice
@@ -36,7 +48,8 @@ Her main device is an iPad with an Apple Pencil.
     - **🌱 Review** (spaced repetition, FSRS): the cards that are due plus a few new ones
       (Settings → New cards per day, per deck and direction), at most ~20 per session. After
       turning a card over she answers 😺 I knew it (swipe right) or 🌱 Not yet (swipe left); a
-      missed card comes back a few cards later. Her **garden** (🌱 sprouts, 🌿 growing,
+      missed card comes back a few cards later. On iPhone/iPad there are no Turn over/Next buttons
+      (tap and swipe the card); the Mac shows them. Her **garden** (🌱 sprouts, 🌿 growing,
       🌸 in bloom, from each card's stability) is the visible progress. Ends with "All done for
       today 🎉" and a Keep practising button.
     - **🎲 Free practice**: endless random decks, nothing remembered.
@@ -47,7 +60,9 @@ Her main device is an iPad with an Apple Pencil.
   - OpenRouter API key (Keychain) and model
   - writing style: as adults write / kanji up to grade N / all hiragana / all katakana
   - furigana, romaji and romaji-in-lists toggles, auto-speak
-  - flash cards: Review mode on/off, new cards per day, reset review progress
+  - flash cards: Review mode on/off, new cards per day, reset review progress, and
+    "Only English on My words cards" (English → 日本語 word cards hide the reading and romaji
+    on the front and show them with the Japanese answer; `FlashCardView.detailWithAnswer`)
   - Apple Watch sync, and export/import of My words
   - About, which contains a personal French note from her father ("Tati"). **Do not
     translate or change it.**
@@ -123,8 +138,12 @@ koneko/                 app target
                         (reviews.json), SelectionCheckmark, StudySplit
   Settings/             AppSettings (UserDefaults), Keychain (with macOS legacy fallback),
                         SettingsView, AboutView, WatchSyncController
-  Display/              SearchField (shared field style, resetID trick), Clipboard,
-                        CopyButton
+  Photo/                PhotoTextButton (📷 menu, camera/library), CameraPicker,
+                        PhotoTextView (Printed via LiveTextImage / Handwriting via
+                        PhotoCropView + HandwritingReader), HandwritingCheckView
+                        (+ HandwritingCheckButton) and HandwritingCoach for flash
+                        cards; iOS only
+  Display/              SearchField (shared field style, resetID trick), Clipboard
   CreditsView.swift     licenses
 Shared/                 both targets
   WordCandidate         word model (parts with readings, romaji, emoji, meaning)
@@ -252,7 +271,8 @@ Credit any new data in `CreditsView`.
   `AIProblem` turns each one into a clear title, message and fixes (Try again, Settings, an
   openrouter.ai link), and `AIProblemView` shows it. Add new failure cases there rather than
   showing a raw `localizedDescription`.
-- Only the looked-up words are sent. The privacy text in `AboutView` says so; keep it true.
+- Only the looked-up words, and the cropped part of a photo for reading or checking handwriting, are sent. The
+  privacy text in `AboutView` says so; keep it true. Printed text in photos never leaves the device.
 
 ## 8. Working conventions
 

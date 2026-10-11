@@ -12,6 +12,10 @@ each character being written stroke by stroke.
   meaning. Results are cached on the device. Japanese typed directly skips the LLM.
 - **Phase 3 (done):** hold-to-talk speech input (on-device where supported) with live
   transcript and "Or did you say…" alternatives.
+- **Words from a photo (iPhone/iPad):** the 📷 button on Write takes or picks a photo.
+  🔤 Printed: Live Text reads it on the device and she selects the words to use (nothing is
+  sent). ✍️ Handwriting: she crops the photo and only the cropped part goes to the AI, which
+  returns the text. The text is then looked up as if typed.
 - **Pronunciation:** the word is spoken with the best installed Japanese voice (from its kana
   reading, so kanji are never misread); slow mode; tapping a character says its sound.
 - **Phase 4 (done):** Practice mode: write each character with Apple Pencil, finger or mouse;

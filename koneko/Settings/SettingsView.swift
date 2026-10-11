@@ -145,10 +145,11 @@ struct SettingsView: View {
                         }
                         .disabled(reviews.states.isEmpty)
                     }
+                    Toggle("Only English on My words cards (English → 日本語)", isOn: $settings.englishOnlyWordPrompts)
                 } header: {
                     Text("Flash cards")
                 } footer: {
-                    Text("Review brings back each card just before she would forget it: cards she knows come back after days or weeks, new or tricky ones sooner. Free practice (random cards, nothing remembered) is always there too. New cards per day counts per deck and direction.")
+                    Text("Review brings back each card just before she would forget it: cards she knows come back after days or weeks, new or tricky ones sooner. Free practice (random cards, nothing remembered) is always there too. New cards per day counts per deck and direction. With “Only English on My words cards”, the reading and romaji appear on the Japanese side instead, after she turns the card over.")
                 }
 
                 Section {

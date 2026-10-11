@@ -164,6 +164,9 @@ struct FlashCardView: View {
     let isFlipped: Bool
     /// 1 on iPhone/iPad, smaller on the watch.
     var scale: CGFloat = 1
+    /// English → 日本語 only: show the detail (reading, romaji) with the Japanese answer
+    /// instead of under the English prompt, so the prompt is just the English.
+    var detailWithAnswer = false
 
     private var frontIsJapanese: Bool { direction == .japaneseFirst }
 
@@ -179,6 +182,19 @@ struct FlashCardView: View {
         .animation(.spring(duration: 0.45), value: isFlipped)
     }
 
+    private var movesDetail: Bool { detailWithAnswer && direction == .englishFirst }
+
+    @ViewBuilder
+    private var detailText: some View {
+        if let detail = card.detail {
+            Text(detail)
+                .font(.system(size: 22 * scale, design: .rounded))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.5)
+        }
+    }
+
     private func face(japanese: Bool) -> some View {
         VStack(spacing: 8 * scale) {
             if japanese {
@@ -186,19 +202,14 @@ struct FlashCardView: View {
                     .font(.handwriting(size: (card.japanese.count > 1 ? 90 : 130) * scale))
                     .lineLimit(1)
                     .minimumScaleFactor(0.3)
+                if movesDetail { detailText }
             } else {
                 Text(card.english)
                     .font(.system(size: 44 * scale, weight: .bold, design: .rounded))
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
                     .minimumScaleFactor(0.4)
-                if let detail = card.detail {
-                    Text(detail)
-                        .font(.system(size: 22 * scale, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .minimumScaleFactor(0.5)
-                }
+                if !movesDetail { detailText }
             }
         }
         .padding(16 * scale)

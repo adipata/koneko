@@ -7,13 +7,15 @@ final class AppSettings {
         let id: String
         let name: String
         let note: String
+        /// It can read photos (used for handwriting).
+        var readsImages = true
     }
 
     static let modelOptions = [
         ModelOption(id: "google/gemini-3.7-flash", name: "Gemini 3.7 Flash", note: "Recommended: fast and good at Japanese"),
         ModelOption(id: "google/gemini-3.6-flash", name: "Gemini 3.6 Flash", note: "Previous Flash version"),
         ModelOption(id: "openai/gpt-5-mini", name: "GPT-5 mini", note: "Cheaper, a bit slower"),
-        ModelOption(id: "deepseek/deepseek-v3.2", name: "DeepSeek V3.2", note: "Very cheap"),
+        ModelOption(id: "deepseek/deepseek-v3.2", name: "DeepSeek V3.2", note: "Very cheap", readsImages: false),
     ]
 
     private enum Keys {
@@ -28,6 +30,7 @@ final class AppSettings {
         static let showFurigana = "showFurigana"
         static let smartReview = "smartReview"
         static let newCardsPerDay = "newCardsPerDay"
+        static let englishOnlyWordPrompts = "englishOnlyWordPrompts"
     }
 
     private let defaults = UserDefaults.standard
@@ -81,6 +84,18 @@ final class AppSettings {
         didSet { defaults.set(newCardsPerDay, forKey: Keys.newCardsPerDay) }
     }
 
+    /// English → 日本語 word cards (My words) show only the English on the front; the reading
+    /// and romaji move to the Japanese side.
+    var englishOnlyWordPrompts: Bool {
+        didSet { defaults.set(englishOnlyWordPrompts, forKey: Keys.englishOnlyWordPrompts) }
+    }
+
+    /// The chosen model, or the default one if it can't read photos.
+    var imageModel: String {
+        let chosen = Self.modelOptions.first { $0.id == model }
+        return chosen?.readsImages == false ? Self.modelOptions[0].id : model
+    }
+
     /// The word as it should appear on screen with the current writing settings.
     func display(_ word: WordCandidate) -> WordCandidate {
         writingStyle.apply(to: word, kanjiLevel: kanjiLevel)
@@ -98,5 +113,6 @@ final class AppSettings {
         showFurigana = defaults.object(forKey: Keys.showFurigana) as? Bool ?? true
         smartReview = defaults.object(forKey: Keys.smartReview) as? Bool ?? true
         newCardsPerDay = defaults.object(forKey: Keys.newCardsPerDay) as? Int ?? 8
+        englishOnlyWordPrompts = defaults.bool(forKey: Keys.englishOnlyWordPrompts)
     }
 }

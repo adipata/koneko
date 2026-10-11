@@ -24,6 +24,9 @@ struct FlashCardSessionView: View {
 
     private var mode: FlashMode { settings.smartReview ? chosenMode : .practice }
     private var isReviewing: Bool { mode == .review }
+    private var isWordDeck: Bool {
+        if case .words = deck { true } else { false }
+    }
     /// Restarts the session when the mode or direction changes.
     private var sessionID: String { "\(mode.rawValue)|\(direction.rawValue)" }
 
@@ -49,7 +52,7 @@ struct FlashCardSessionView: View {
                 }
 
                 if let card {
-                    FlashCardView(card: card, direction: direction, isFlipped: isFlipped)
+                    FlashCardView(card: card, direction: direction, isFlipped: isFlipped, detailWithAnswer: isWordDeck && settings.englishOnlyWordPrompts)
                         .aspectRatio(0.8, contentMode: .fit)
                         .frame(maxWidth: 420, maxHeight: 520)
                         .id(count)
@@ -109,6 +112,12 @@ struct FlashCardSessionView: View {
             .buttonBorderShape(.circle)
             .font(.title2)
 
+            #if os(iOS)
+            if direction == .englishFirst, let card {
+                HandwritingCheckButton(card: card, isWord: isWordDeck, model: settings.imageModel)
+            }
+            #endif
+
             if isReviewing, isFlipped {
                 Button("🌱 Not yet") { answer(.notYet) }
                     .buttonStyle(.bordered)
@@ -116,7 +125,10 @@ struct FlashCardSessionView: View {
                 Button("😺 I knew it") { answer(.knewIt) }
                     .buttonStyle(.borderedProminent)
                     .font(.title3)
-            } else {
+            }
+            #if !os(iOS)
+            // On iPhone and iPad tapping and swiping the card is enough.
+            if !(isReviewing && isFlipped) {
                 Button(isFlipped ? "Hide" : "Turn over", systemImage: "arrow.left.arrow.right") { flip() }
                     .buttonStyle(.bordered)
                     .font(.title3)
@@ -126,6 +138,7 @@ struct FlashCardSessionView: View {
                         .font(.title3)
                 }
             }
+            #endif
         }
     }
 
@@ -133,7 +146,11 @@ struct FlashCardSessionView: View {
         switch (isReviewing, isFlipped) {
         case (_, false): "Tap the card to turn it over"
         case (true, true): "Did you know it? Swipe right for yes, left for not yet"
+        #if os(iOS)
+        case (false, true): "Swipe left for another card"
+        #else
         case (false, true): "Swipe left or tap Next for another card"
+        #endif
         }
     }
 
