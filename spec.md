@@ -31,6 +31,7 @@ Her main device is an iPad with an Apple Pencil.
   - hiragana and katakana charts (basic, ゛゜, combined), with sound, strokes and practice
   - kanji by school grade (1–6, plus 7 = secondary), grouped and searchable, with an AI
     explanation that is cached
+  - the selected character has a Copy button (`CopyButton`: the icon turns into a ✓ briefly)
   - Flash cards, in two modes (picked at the top of a session, remembered):
     - **🌱 Review** (spaced repetition, FSRS): the cards that are due plus a few new ones
       (Settings → New cards per day, per deck and direction), at most ~20 per session. After
@@ -122,7 +123,8 @@ koneko/                 app target
                         (reviews.json), SelectionCheckmark, StudySplit
   Settings/             AppSettings (UserDefaults), Keychain (with macOS legacy fallback),
                         SettingsView, AboutView, WatchSyncController
-  Display/              SearchField (shared field style, resetID trick), Clipboard
+  Display/              SearchField (shared field style, resetID trick), Clipboard,
+                        CopyButton
   CreditsView.swift     licenses
 Shared/                 both targets
   WordCandidate         word model (parts with readings, romaji, emoji, meaning)

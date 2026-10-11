@@ -200,6 +200,7 @@ struct KanaDetailView: View {
                         Button("Say it slowly", systemImage: "tortoise.fill") {
                             Pronouncer.shared.speak(cell.hiragana, slow: true)
                         }
+                        CopyButton(text: text)
                     }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.bordered)

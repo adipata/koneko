@@ -23,7 +23,7 @@ each character being written stroke by stroke.
 - **Apple Watch (in progress):** My words sync through iCloud key-value storage to a
   watchOS app (`KonekoWatch/`, shared code in `Shared/`). Setup: see `docs/AppleWatch.md`.
 - **Learn:** hiragana and katakana charts (basic, ゛゜, combined sounds) and kanji by school
-  grade with search; each character shows its sound, stroke order and practice; kanji get an
+  grade with search; each character shows its sound, stroke order and practice, with a Copy button; kanji get an
   AI explanation with example words (cached). Offline kanji data: `Shared/Resources/kanji_info.json`
   (`python3 Tools/build_kanji_info.py`).
 - **Navigation:** Write · My words · Learn · Settings as a tab bar on iPhone and a sidebar on
