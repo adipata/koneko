@@ -97,6 +97,12 @@ struct FlashCardSessionView: View {
                         .multilineTextAlignment(.center)
 
                     buttons
+
+                    #if os(iOS)
+                    if isWordDeck, direction == .englishFirst, let card {
+                        HandwritingCheckButton(card: card, model: settings.imageModel)
+                    }
+                    #endif
                 }
 
                 Text(footer)

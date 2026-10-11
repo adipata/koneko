@@ -32,6 +32,11 @@ Her main device is an iPad with an Apple Pencil.
   - Swipe or context menu per word; Select mode for bulk move, pin and delete.
   - Flash cards from one or more folders (or All / Pinned), from search results, or from
     the words ticked in Select mode (`WordFlashPickerView`).
+  - In English → 日本語 word flash cards, 📷 **Check my writing** (iPhone/iPad only) under the
+    card: she writes the word on paper, takes or chooses a photo, frames it, and the AI
+    (`HandwritingCoach`, `settings.imageModel`) returns advice shown in a box: what it read,
+    whether it's the right word, the word as a whole (missing/wrong characters, small kana,
+    ゛゜, long vowels), then each character's form. No stroke-order guesses.
   - Export/import as JSON; delete-all is in Settings.
 - **Learn**:
   - hiragana and katakana charts (basic, ゛゜, combined), with sound, strokes and practice
@@ -130,7 +135,9 @@ koneko/                 app target
                         SettingsView, AboutView, WatchSyncController
   Photo/                PhotoTextButton (📷 menu, camera/library), CameraPicker,
                         PhotoTextView (Printed via LiveTextImage / Handwriting via
-                        PhotoCropView + HandwritingReader); iOS only
+                        PhotoCropView + HandwritingReader), HandwritingCheckView
+                        (+ HandwritingCheckButton) and HandwritingCoach for flash
+                        cards; iOS only
   Display/              SearchField (shared field style, resetID trick), Clipboard
   CreditsView.swift     licenses
 Shared/                 both targets
@@ -240,7 +247,7 @@ Credit any new data in `CreditsView`.
   `AIProblem` turns each one into a clear title, message and fixes (Try again, Settings, an
   openrouter.ai link), and `AIProblemView` shows it. Add new failure cases there rather than
   showing a raw `localizedDescription`.
-- Only the looked-up words, and the cropped part of a photo for handwriting, are sent. The
+- Only the looked-up words, and the cropped part of a photo for reading or checking handwriting, are sent. The
   privacy text in `AboutView` says so; keep it true. Printed text in photos never leaves the device.
 
 ## 8. Working conventions
