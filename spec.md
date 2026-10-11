@@ -43,6 +43,7 @@ Her main device is an iPad with an Apple Pencil.
   - hiragana and katakana charts (basic, ゛゜, combined), with sound, strokes and practice
   - kanji by school grade (1–6, plus 7 = secondary), grouped and searchable, with an AI
     explanation that is cached
+  - the selected character has a Copy button (`CopyButton`: the icon turns into a ✓ briefly)
   - Flash cards, in two modes (picked at the top of a session, remembered):
     - **🌱 Review** (spaced repetition, FSRS): the cards that are due plus a few new ones
       (Settings → New cards per day, per deck and direction), at most ~20 per session. After
@@ -70,8 +71,11 @@ Her main device is an iPad with an Apple Pencil.
 - **Apple Watch**:
   - My words (folders, pinned, all; dictation search) and a word pager with pronunciation
   - kana list and full-screen characters: Digital Crown for next, swipe to switch script
-  - flash cards, including sets (Free practice only; review progress isn't synced yet)
-  - data is read-only and comes from the phone/iPad through iCloud key-value storage
+  - flash cards, including sets, in 🌱 Review (when the phone/iPad has Review mode on) and
+    🎲 Free practice. Review uses the progress synced from the phone/iPad; after turning a card
+    over she taps 🌱 or 😺 in the bottom bar (the crown doesn't skip cards in Review)
+  - words and sets are read-only and come from the phone/iPad through iCloud key-value
+    storage; review answers go back the same way (see §4)
 
 Tone: friendly and simple for a child, with emoji where it helps, and never scoring,
 punishing or pressuring her. Review's "I knew it / Not yet" is private self-assessment for
@@ -129,10 +133,9 @@ koneko/                 app target
                         HistoryView (My words UI), SaveWordBar (Pin/folder on Write),
                         WordFlashPickerView (word flash cards from several folders)
   Learn/                LearnView, KanaStudyView, KanjiBrowserView, KanjiExplainer,
-                        KanjiEmoji, FlashCardSessionView (+ FlashMode, GardenRow),
+                        KanjiEmoji, FlashCardSessionView (+ GardenRow),
                         FlashSetsView, FlashSetStore (+ SymbolSelection), ReviewStore
-                        (reviews.json), ReviewDealer (one Review session's queue),
-                        SelectionCheckmark, StudySplit
+                        (reviews.json), SelectionCheckmark, StudySplit
   Settings/             AppSettings (UserDefaults), Keychain (with macOS legacy fallback),
                         SettingsView, AboutView, WatchSyncController
   Photo/                PhotoTextButton (📷 menu, camera/library), CameraPicker,
@@ -146,10 +149,11 @@ Shared/                 both targets
   WordCandidate         word model (parts with readings, romaji, emoji, meaning)
   Dictionary            HistoryEntry, WordFolder, DictionaryFile (export format), searched()
   CloudSync             WatchSnapshot (LZFSE-compressed JSON in NSUbiquitousKeyValueStore,
-                        key "koneko.watchSnapshot.v1", ≤ 1 MB)
-  FlashCards, FlashSets FlashDeck/FlashCard/FlashShuffler (shuffled deck), FlashSet
+                        key "koneko.watchSnapshot.v1", ≤ 1 MB), WatchReviews, review keys
+  FlashCards, FlashSets FlashDeck/FlashCard/FlashShuffler (shuffled deck), FlashMode, FlashSet
   SRS                   FSRS-5 scheduler (default parameters, Again/Good only), ReviewState,
-                        GardenStage/Garden
+                        GardenStage/Garden, WatchAnswer, apply/garden/introducedToday helpers
+  ReviewDealer          one Review session's queue (phone and watch)
   KanaChart, KanjiLibrary, KanjiGroups   kana table, kanji grades/info (Resources/*.json)
   Pronouncer, AudioSessionQueue          TTS (see §5)
   WritingStyle          display transformation + Klee One handwriting font
@@ -176,7 +180,8 @@ docs/AppleWatch.md      watch setup and run instructions
   `[String: ReviewState]` keyed by `FlashCard.reviewKey(direction)`, e.g.
   `kana:hiragana:か|japaneseFirst`, `kanji:日|englishFirst`, `word:ねこ|cat|japaneseFirst`
   (words by reading + meaning, which don't change with the writing style). Keep these keys
-  stable, or progress is lost. It is per device: not synced, not in export/import (yet).
+  stable, or progress is lost. It is per device (not in export/import yet), except that the
+  device that syncs to the watch shares it with the watch (below).
   `ReviewStore` and `AppSettings` are in the SwiftUI environment (set in `RootView`), which is
   how `FlashCardSessionView` reads them.
 - **Settings** are in `UserDefaults` via `AppSettings`. The API key is **only** in the
@@ -188,6 +193,20 @@ docs/AppleWatch.md      watch setup and run instructions
   - The watch reads it in `WatchStore`.
   - When adding a field to `WatchSnapshot`, make it **optional** so older snapshots still
     decode, and add it to the sync key.
+  - **Review on the watch** uses two more KVS keys (compressed JSON, `CloudSync.save/load`):
+    - `koneko.watchReviews.v1`: `WatchReviews` (all `ReviewState`s, Review mode, new cards per
+      day, `resetAt`), written by `WatchSyncController.updateReviews` from `RootView` a few
+      seconds after `ReviewStore.revision` changes (debounced, so not once per card).
+    - `koneko.watchAnswers.v1`: `[WatchAnswer]` (key, rating, date) written by the watch.
+      The phone/iPad/Mac is the source of truth: on launch, foreground and KVS change it replays
+      the answers into `ReviewStore` with `[String: ReviewState].apply` (FSRS at the answer's
+      time, skipping answers no newer than the card's `lastReview` or before `resetAt`, so
+      replaying twice is harmless) and publishes the new progress. The watch keeps its answers
+      in `watchAnswers.json`, shows progress + pending answers (`WatchStore.reviewStates`), and
+      drops an answer once the progress it gets back includes it. So the watch reviews offline,
+      and answers reach the phone next time Koneko is open there.
+    - Only a device with Sync to Apple Watch on publishes progress or collects answers.
+    - KVS allows 1 MB in total, shared by the snapshot and these keys.
 - Translations and kanji explanations are cached on the device.
 
 ## 5. Hard-won lessons (don't regress these)
@@ -224,6 +243,9 @@ docs/AppleWatch.md      watch setup and run instructions
 - **Install errors:** if Xcode tries to install from `Debug-watchos/koneko.app` on the iPhone,
   re-select the `koneko` scheme and the iPhone destination, then Clean Build Folder. It's
   not a code issue.
+- **Watch not updating:** running the iPhone app from Xcode in debug may not install the new
+  watch build, so the watch keeps an old version. Install through TestFlight/App Store (or run
+  the watch scheme on the watch) and check the watch really has the new build before debugging.
 
 ## 6. Data sources and tools
 

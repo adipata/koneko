@@ -15,6 +15,23 @@ enum FlashDirection: String, CaseIterable, Identifiable {
     }
 }
 
+/// How a flash-card session deals its cards.
+enum FlashMode: String, CaseIterable, Identifiable {
+    /// Spaced repetition: due cards and a few new ones; she says whether she knew each card.
+    case review
+    /// Random cards forever, nothing remembered.
+    case practice
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .review: "🌱 Review"
+        case .practice: "🎲 Free practice"
+        }
+    }
+}
+
 /// A set of flash cards: one alphabet, the kanji of one school grade, her own set, or words.
 enum FlashDeck: Hashable, Identifiable {
     case kana(KanaScript)

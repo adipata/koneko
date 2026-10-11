@@ -204,6 +204,8 @@ struct SettingsView: View {
                     if settings.syncToWatch {
                         Button("Sync now", systemImage: "arrow.triangle.2.circlepath.icloud") {
                             watchSync.update(history: history, settings: settings)
+                            watchSync.collectAnswers(into: reviews, settings: settings)
+                            watchSync.updateReviews(reviews, settings: settings)
                         }
                     }
                     if settings.syncToWatch, let status = watchSync.status {
@@ -213,7 +215,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Apple Watch")
                 } footer: {
-                    Text("Shares her words through iCloud with the Koneko app on an Apple Watch signed in to the same Apple Account. The watch shows them read-only. Turn this on on one device only (e.g. her iPad): each device sends its own word list, and the last one to sync wins.")
+                    Text("Shares her words through iCloud with the Koneko app on an Apple Watch signed in to the same Apple Account. The watch shows them read-only. Flash-card Review progress goes both ways: what she answers on the watch is added here when Koneko is open. Turn this on on one device only (e.g. her iPad): each device sends its own words and progress, and the last one to sync wins.")
                 }
 
                 Section {
