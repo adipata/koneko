@@ -32,7 +32,8 @@ Her main device is an iPad with an Apple Pencil.
   - Swipe or context menu per word; Select mode for bulk move, pin and delete.
   - Flash cards from one or more folders (or All / Pinned), from search results, or from
     the words ticked in Select mode (`WordFlashPickerView`).
-  - In English → 日本語 word flash cards, 📷 **Check my writing** (iPhone/iPad only) under the
+  - In English → 日本語 word flash cards, 📷 **Check my writing** (iPhone/iPad only), next to the
+    speaker under the
     card: she writes the word on paper, takes or chooses a photo, frames it, and the AI
     (`HandwritingCoach`, `settings.imageModel`) returns advice shown in a box: what it read,
     whether it's the right word, the word as a whole (missing/wrong characters, small kana,
@@ -46,7 +47,8 @@ Her main device is an iPad with an Apple Pencil.
     - **🌱 Review** (spaced repetition, FSRS): the cards that are due plus a few new ones
       (Settings → New cards per day, per deck and direction), at most ~20 per session. After
       turning a card over she answers 😺 I knew it (swipe right) or 🌱 Not yet (swipe left); a
-      missed card comes back a few cards later. Her **garden** (🌱 sprouts, 🌿 growing,
+      missed card comes back a few cards later. On iPhone/iPad there are no Turn over/Next buttons
+      (tap and swipe the card); the Mac shows them. Her **garden** (🌱 sprouts, 🌿 growing,
       🌸 in bloom, from each card's stability) is the visible progress. Ends with "All done for
       today 🎉" and a Keep practising button.
     - **🎲 Free practice**: endless random decks, nothing remembered.

@@ -24,9 +24,11 @@ struct HandwritingCheckButton: View {
             Button("Choose a photo", systemImage: "photo.on.rectangle") { showsLibrary = true }
         } label: {
             Label("Check my writing", systemImage: "camera")
-                .font(.title3)
+                .labelStyle(.iconOnly)
         }
         .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
+        .font(.title2)
         .accessibilityHint("Take a photo of the word you wrote by hand")
         .fullScreenCover(isPresented: $showsCamera, onDismiss: showTakenPhoto) {
             CameraPicker { takenPhoto = $0 }

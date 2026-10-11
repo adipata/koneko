@@ -97,12 +97,6 @@ struct FlashCardSessionView: View {
                         .multilineTextAlignment(.center)
 
                     buttons
-
-                    #if os(iOS)
-                    if isWordDeck, direction == .englishFirst, let card {
-                        HandwritingCheckButton(card: card, model: settings.imageModel)
-                    }
-                    #endif
                 }
 
                 Text(footer)
@@ -135,6 +129,12 @@ struct FlashCardSessionView: View {
             .buttonBorderShape(.circle)
             .font(.title2)
 
+            #if os(iOS)
+            if isWordDeck, direction == .englishFirst, let card {
+                HandwritingCheckButton(card: card, model: settings.imageModel)
+            }
+            #endif
+
             if isReviewing, isFlipped {
                 Button("🌱 Not yet") { answer(.notYet) }
                     .buttonStyle(.bordered)
@@ -142,7 +142,10 @@ struct FlashCardSessionView: View {
                 Button("😺 I knew it") { answer(.knewIt) }
                     .buttonStyle(.borderedProminent)
                     .font(.title3)
-            } else {
+            }
+            #if !os(iOS)
+            // On iPhone and iPad tapping and swiping the card is enough.
+            if !(isReviewing && isFlipped) {
                 Button(isFlipped ? "Hide" : "Turn over", systemImage: "arrow.left.arrow.right") { flip() }
                     .buttonStyle(.bordered)
                     .font(.title3)
@@ -152,6 +155,7 @@ struct FlashCardSessionView: View {
                         .font(.title3)
                 }
             }
+            #endif
         }
     }
 
@@ -159,7 +163,11 @@ struct FlashCardSessionView: View {
         switch (isReviewing, isFlipped) {
         case (_, false): "Tap the card to turn it over"
         case (true, true): "Did you know it? Swipe right for yes, left for not yet"
+        #if os(iOS)
+        case (false, true): "Swipe left for another card"
+        #else
         case (false, true): "Swipe left or tap Next for another card"
+        #endif
         }
     }
 
