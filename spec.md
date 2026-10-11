@@ -222,6 +222,9 @@ docs/AppleWatch.md      watch setup and run instructions
 - **Install errors:** if Xcode tries to install from `Debug-watchos/koneko.app` on the iPhone,
   re-select the `koneko` scheme and the iPhone destination, then Clean Build Folder. It's
   not a code issue.
+- **Watch not updating:** running the iPhone app from Xcode in debug may not install the new
+  watch build, so the watch keeps an old version. Install through TestFlight/App Store (or run
+  the watch scheme on the watch) and check the watch really has the new build before debugging.
 
 ## 6. Data sources and tools
 
