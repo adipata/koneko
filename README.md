@@ -40,7 +40,7 @@ each character being written stroke by stroke.
   🌱 Not yet after turning a card over, and watch the garden grow (🌱 → 🌿 → 🌸). 🎲 Free
   practice keeps the endless random cards. Settings → Flash cards: on/off, new cards per day,
   reset. On the watch, pick Mode → 🌱 Review in the flash-card menu: it uses the progress
-  synced from the phone/iPad, works offline, and its answers are added to the phone/iPad's
+  synced from the phone/iPad (until that arrives, the menu says what to turn on), works offline, and its answers are added to the phone/iPad's
   progress next time Koneko is open there.
   **Sets:** Learn → Select (Photos-style ticks; tap a row/column letter or "Select all" for a
   group; for kanji, search results, a category or a whole grade) → Save as set. One set can mix

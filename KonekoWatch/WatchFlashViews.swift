@@ -10,16 +10,25 @@ struct WatchFlashMenuView: View {
     /// Her sets (which can mix hiragana, katakana and kanji), synced from the iPhone/iPad/Mac.
     private var sets: [FlashSet] { store.snapshot?.flashSets ?? [] }
 
+    /// Why Review isn't available yet (sessions then use Free practice).
+    private var reviewHint: String {
+        store.reviews == nil
+            ? "Review needs her progress: open Koneko on the iPhone or iPad with Settings → Apple Watch sync on, then tap Refresh on the watch's main screen. Until then, cards are Free practice."
+            : "Review mode is off in Koneko's Settings on the iPhone or iPad. Until it's on, cards are Free practice."
+    }
+
     var body: some View {
         List {
             Section {
-                if store.canReview {
-                    Picker("Mode", selection: $mode) {
-                        ForEach(FlashMode.allCases) { Text($0.title).tag($0) }
-                    }
+                Picker("Mode", selection: $mode) {
+                    ForEach(FlashMode.allCases) { Text($0.title).tag($0) }
                 }
                 Picker("Show first", selection: $direction) {
                     ForEach(FlashDirection.allCases) { Text($0.title).tag($0) }
+                }
+            } footer: {
+                if mode == .review, !store.canReview {
+                    Text(reviewHint)
                 }
             }
             if !sets.isEmpty {
