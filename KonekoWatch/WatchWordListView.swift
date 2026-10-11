@@ -105,9 +105,9 @@ struct WatchWordListView: View {
                 case .words(let page):
                     WatchWordPager(store: store, entries: page.entries, selection: page.startID)
                 case .flashMenu:
-                    WatchFlashMenuView(sets: store.snapshot?.flashSets ?? [])
+                    WatchFlashMenuView(store: store)
                 case .flash(let deck):
-                    WatchFlashSessionView(deck: deck, kanji: kanji)
+                    WatchFlashSessionView(deck: deck, kanji: kanji, store: store)
                 }
             }
         }

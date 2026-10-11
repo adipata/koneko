@@ -73,6 +73,55 @@ nonisolated struct Garden: Equatable, Sendable {
     var planted: Int { counts.values.reduce(0, +) }
 }
 
+/// One answer she gave on the Apple Watch, waiting for the iPhone/iPad/Mac to add it to her
+/// progress (the watch keeps it until the progress it gets back includes it).
+nonisolated struct WatchAnswer: Codable, Equatable, Sendable {
+    /// `FlashCard.reviewKey(_:)`.
+    var key: String
+    var rating: ReviewRating
+    var date: Date
+}
+
+/// Review progress by `FlashCard.reviewKey(_:)`: what `ReviewStore` saves and the watch gets.
+extension [String: ReviewState] {
+    /// How many of `keys` she met for the first time today.
+    func introducedToday(_ keys: [String]) -> Int {
+        let calendar = Calendar.current
+        return keys.filter { key in
+            self[key].map { calendar.isDateInToday($0.introduced) } ?? false
+        }.count
+    }
+
+    /// Her garden for these cards: sprouts, growing and blooming plants, and seeds not met yet.
+    func garden(_ keys: [String]) -> Garden {
+        var garden = Garden()
+        for key in Set(keys) {
+            if let state = self[key] {
+                garden.counts[state.stage, default: 0] += 1
+            } else {
+                garden.seeds += 1
+            }
+        }
+        return garden
+    }
+
+    /// Adds answers given on the watch, oldest first, as if they had been given here at that
+    /// time. An answer no newer than the card's last review is already in (or was overtaken by a
+    /// later review), and one before `reset` was forgotten, so applying the same answers again
+    /// changes nothing. Returns whether anything changed.
+    @discardableResult
+    mutating func apply(_ answers: [WatchAnswer], after reset: Date? = nil) -> Bool {
+        var changed = false
+        for answer in answers.sorted(by: { $0.date < $1.date }) {
+            if let reset, answer.date <= reset { continue }
+            if let last = self[answer.key]?.lastReview, answer.date <= last { continue }
+            self[answer.key] = FSRS.review(self[answer.key], rating: answer.rating, at: answer.date)
+            changed = true
+        }
+        return changed
+    }
+}
+
 /// FSRS-5 (Free Spaced Repetition Scheduler) with its default parameters, using only the
 /// Again and Good answers. It estimates how likely she is to remember each card from the real
 /// time since she last saw it, so days or weeks off are handled without special cases.

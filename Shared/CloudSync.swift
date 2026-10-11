@@ -22,6 +22,18 @@ nonisolated struct WatchSnapshot: Codable, Sendable {
     }
 }
 
+/// Her flash-card review progress, shared by the iPhone/iPad/Mac with the watch so she can
+/// review there too. Kept apart from `WatchSnapshot` because it changes with every answer.
+nonisolated struct WatchReviews: Codable, Sendable {
+    var states: [String: ReviewState]
+    /// Settings → Flash cards → Review mode.
+    var reviewMode: Bool
+    var newCardsPerDay: Int
+    /// "Reset review progress": watch answers from before this are forgotten.
+    var resetAt: Date?
+    var updatedAt = Date.now
+}
+
 /// Stores the word list in iCloud key-value storage, where the watch app reads it.
 ///
 /// Both apps need the iCloud "Key-value storage" capability with the same key-value store
@@ -29,6 +41,10 @@ nonisolated struct WatchSnapshot: Codable, Sendable {
 /// which is room for a few thousand words.
 nonisolated enum CloudSync {
     static let key = "koneko.watchSnapshot.v1"
+    /// `WatchReviews`, written by the iPhone/iPad/Mac.
+    static let reviewsKey = "koneko.watchReviews.v1"
+    /// `[WatchAnswer]` not yet added to her progress, written by the watch.
+    static let answersKey = "koneko.watchAnswers.v1"
     static let maxBytes = 1_000_000
 
     enum SyncError: LocalizedError {
@@ -77,9 +93,32 @@ nonisolated enum CloudSync {
         return try? decoder.decode(WatchSnapshot.self, from: json)
     }
 
-    /// Stops sharing: removes the word list from iCloud.
+    /// Saves review progress or watch answers (compressed JSON) under `key`. iCloud keeps it on
+    /// the device until it can upload it.
+    static func save<Value: Encodable>(_ value: Value, forKey key: String) throws {
+        let json = try JSONEncoder().encode(value)
+        let compressed = try (json as NSData).compressed(using: .lzfse) as Data
+        guard compressed.count < maxBytes else { throw SyncError.tooLarge(compressed.count) }
+        let store = NSUbiquitousKeyValueStore.default
+        store.set(compressed, forKey: key)
+        store.synchronize()
+    }
+
+    /// Reads what `save(_:forKey:)` wrote (nil if there is nothing yet).
+    static func load<Value: Decodable>(_ type: Value.Type, forKey key: String) -> Value? {
+        NSUbiquitousKeyValueStore.default.data(forKey: key).flatMap { decode(type, from: $0) }
+    }
+
+    static func decode<Value: Decodable>(_ type: Value.Type, from compressed: Data) -> Value? {
+        guard let json = try? (compressed as NSData).decompressed(using: .lzfse) as Data else { return nil }
+        return try? JSONDecoder().decode(type, from: json)
+    }
+
+    /// Stops sharing: removes the word list and review progress from iCloud.
     static func remove() {
-        NSUbiquitousKeyValueStore.default.removeObject(forKey: key)
-        NSUbiquitousKeyValueStore.default.synchronize()
+        let store = NSUbiquitousKeyValueStore.default
+        store.removeObject(forKey: key)
+        store.removeObject(forKey: reviewsKey)
+        store.synchronize()
     }
 }
