@@ -32,12 +32,12 @@ Her main device is an iPad with an Apple Pencil.
   - Swipe or context menu per word; Select mode for bulk move, pin and delete.
   - Flash cards from one or more folders (or All / Pinned), from search results, or from
     the words ticked in Select mode (`WordFlashPickerView`).
-  - In English → 日本語 word flash cards, 📷 **Check my writing** (iPhone/iPad only), next to the
-    speaker under the
-    card: she writes the word on paper, takes or chooses a photo, frames it, and the AI
+  - In English → 日本語 flash cards (word decks here, and the kana/kanji/set decks in Learn),
+    📷 **Check my writing** (iPhone/iPad only), next to the speaker under the card: she writes the word on paper, takes or chooses a photo, frames it, and the AI
     (`HandwritingCoach`, `settings.imageModel`) returns advice shown in a box: what it read,
     whether it's the right word, the word as a whole (missing/wrong characters, small kana,
-    ゛゜, long vowels), then each character's form. No stroke-order guesses.
+    ゛゜, long vowels), then each character's form. No stroke-order guesses. Words accept
+    hiragana for kanji; Learn cards need exactly that kana or kanji (`isWord`).
   - Export/import as JSON; delete-all is in Settings.
 - **Learn**:
   - hiragana and katakana charts (basic, ゛゜, combined), with sound, strokes and practice

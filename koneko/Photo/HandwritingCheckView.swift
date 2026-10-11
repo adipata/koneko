@@ -3,10 +3,13 @@ import PhotosUI
 import SwiftUI
 import UIKit
 
-/// The 📷 button under an English → 日本語 word card: she writes the word on paper, takes a
-/// photo, and the AI says what to fix, from the word itself down to how each character is formed.
+/// The 📷 button under an English → 日本語 flash card (a word from My words, or a kana or kanji
+/// in Learn): she writes the answer on paper, takes a photo, and the AI says what to fix, from
+/// the word itself down to how each character is formed.
 struct HandwritingCheckButton: View {
     let card: FlashCard
+    /// A word from My words (rather than a kana or kanji she is learning).
+    let isWord: Bool
     let model: String
 
     @State private var showsCamera = false
@@ -29,7 +32,7 @@ struct HandwritingCheckButton: View {
         .buttonStyle(.bordered)
         .buttonBorderShape(.circle)
         .font(.title2)
-        .accessibilityHint("Take a photo of the word you wrote by hand")
+        .accessibilityHint("Take a photo of what you wrote by hand")
         .fullScreenCover(isPresented: $showsCamera, onDismiss: showTakenPhoto) {
             CameraPicker { takenPhoto = $0 }
                 .ignoresSafeArea()
@@ -41,7 +44,7 @@ struct HandwritingCheckButton: View {
             Task { await load(item) }
         }
         .sheet(item: $check) { check in
-            HandwritingCheckView(image: check.image, card: check.card, model: model)
+            HandwritingCheckView(image: check.image, card: check.card, isWord: isWord, model: model)
         }
     }
 
@@ -69,6 +72,7 @@ private struct PendingCheck: Identifiable {
 struct HandwritingCheckView: View {
     let image: UIImage
     let card: FlashCard
+    let isWord: Bool
     let model: String
 
     @Environment(\.dismiss) private var dismiss
@@ -117,7 +121,7 @@ struct HandwritingCheckView: View {
             } else if let problem {
                 AIProblemView(problem: problem, retry: runCheck)
             } else {
-                Text("Move the frame around the word you wrote.")
+                Text("Move the frame around what you wrote.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -134,11 +138,11 @@ struct HandwritingCheckView: View {
         checking = Task {
             defer { checking = nil }
             do {
-                let result = try await HandwritingCoach.check(crop, card: card, model: model)
+                let result = try await HandwritingCoach.check(crop, card: card, isWord: isWord, model: model)
                 if result.read.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     problem = AIProblem(
                         title: "I couldn't find your writing",
-                        message: "Put the frame closer around the word, or take a clearer photo.",
+                        message: "Put the frame closer around your writing, or take a clearer photo.",
                         systemImage: "eye.slash", canRetry: false
                     )
                 } else {
@@ -168,7 +172,7 @@ private struct AdviceBox: View {
                         Text("You wrote \(advice.read)")
                             .font(.title3.bold())
                         if !advice.rightWord {
-                            Text("The word is \(expected)")
+                            Text("It should be \(expected)")
                                 .font(.headline)
                                 .foregroundStyle(.secondary)
                         }

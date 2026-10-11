@@ -130,8 +130,8 @@ struct FlashCardSessionView: View {
             .font(.title2)
 
             #if os(iOS)
-            if isWordDeck, direction == .englishFirst, let card {
-                HandwritingCheckButton(card: card, model: settings.imageModel)
+            if direction == .englishFirst, let card {
+                HandwritingCheckButton(card: card, isWord: isWordDeck, model: settings.imageModel)
             }
             #endif
 

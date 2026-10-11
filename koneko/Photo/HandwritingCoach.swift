@@ -1,9 +1,9 @@
 #if os(iOS)
 import UIKit
 
-/// Advice on a word she wrote by hand for an English → 日本語 flash card: the AI (OpenRouter)
-/// looks at the cropped photo and compares it with the card's word, first the word as a whole,
-/// then the shape of each character.
+/// Advice on what she wrote by hand for an English → 日本語 flash card (a word, a kana or a
+/// kanji): the AI (OpenRouter) looks at the cropped photo and compares it with the card, first
+/// the word as a whole, then the shape of each character.
 nonisolated struct HandwritingAdvice: Decodable, Sendable {
     struct CharacterAdvice: Decodable, Sendable, Hashable {
         let character: String
@@ -23,13 +23,18 @@ nonisolated struct HandwritingAdvice: Decodable, Sendable {
 }
 
 enum HandwritingCoach {
-    static func check(_ image: UIImage, card: FlashCard, model: String) async throws -> HandwritingAdvice {
+    /// `isWord`: a word from My words, where hiragana for a kanji is fine. Otherwise it's a kana
+    /// or kanji she is learning, and she must write exactly that character.
+    static func check(_ image: UIImage, card: FlashCard, isWord: Bool, model: String) async throws -> HandwritingAdvice {
         guard let apiKey = Keychain.apiKey, !apiKey.isEmpty else { throw TranslationError.missingAPIKey }
         guard let jpeg = image.jpegData(compressionQuality: 0.8) else { throw TranslationError.badResponse }
         let client = OpenRouterClient(apiKey: apiKey, model: model)
-        var user = """
+        var user = isWord ? """
         The flash card showed the English: \(card.english)
         The expected Japanese word: \(card.japanese)
+        """ : """
+        She is learning a kana or kanji. The flash card showed: \(card.english)
+        The expected answer, exactly in this script: \(card.japanese)
         """
         if let detail = card.detail {
             user += "\nReading and romaji: \(detail)"
@@ -46,17 +51,19 @@ enum HandwritingCoach {
 
     private static let systemPrompt = """
     You are a kind Japanese handwriting teacher for a 9-year-old child. She saw an English word
-    on a flash card and wrote the Japanese word by hand on paper. You get the expected word and a
-    photo of her writing. Answer in simple English, short sentences, warm and encouraging, never
+    (or a romaji sound like "ka", or a kanji's meaning) on a flash card and wrote the Japanese
+    by hand on paper. You get the expected answer and a photo of her writing. Answer in simple English, short sentences, warm and encouraging, never
     harsh. Be honest: if something is wrong, say what and how to fix it.
 
     Work from the big picture down to the details:
     1. "read": exactly what she wrote, as you read it (kana or kanji, no romaji). Empty if you
        can't find any writing.
-    2. "rightWord": true if she wrote the expected word. Writing a kanji word fully in hiragana,
-       or with fewer kanji, still counts as right.
-    3. "word": about the word as a whole. Is it the right word? Any missing, extra, swapped or
-       wrong characters? Hiragana where katakana is expected or the other way round? Small kana
+    2. "rightWord": true if she wrote the expected answer. For a word, writing a kanji word fully
+       in hiragana, or with fewer kanji, still counts as right. For a single character she is
+       learning, only that exact kana or kanji counts (not its reading, not the other kana script).
+    3. "word": about the answer as a whole. For a single kana or kanji, one sentence: the right
+       one or not, and if not, what she wrote instead. For a word: is it the right word? Any
+       missing, extra, swapped or wrong characters? Hiragana where katakana is expected or the other way round? Small kana
        (っ ゃ ゅ ょ), dakuten ゛ and handakuten ゜, long vowels (ー, おう, えい)? If she used
        hiragana for a kanji, say it's fine and mention the kanji gently. If the word is right,
        say so in one sentence.
