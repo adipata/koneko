@@ -12,6 +12,12 @@ Her main device is an iPad with an Apple Pencil.
 - **Write** (main screen): she says or types a word.
   - Hold-to-talk works in English or 日本語, with a segmented switch. Typing uses a search
     field with an ➜ button.
+  - 📷 Words from a photo (iPhone/iPad only, `Photo/`): take or choose a photo. Printed text
+    is read on the device with VisionKit Live Text (`ImageAnalyzer`, ja + en) and she selects
+    the words; handwriting is cropped (`PhotoCropView`) and only the crop is sent to the AI
+    (`HandwritingReader`, image input via `requestJSON(imageJPEG:)`, using
+    `AppSettings.imageModel`, which skips models that can't read images). The text then goes
+    into the field and is looked up.
   - English is translated through OpenRouter, which returns several candidates.
   - Japanese typed directly is shown as is, with no AI call if it's offline.
   - The word card shows:
@@ -122,6 +128,9 @@ koneko/                 app target
                         SelectionCheckmark, StudySplit
   Settings/             AppSettings (UserDefaults), Keychain (with macOS legacy fallback),
                         SettingsView, AboutView, WatchSyncController
+  Photo/                PhotoTextButton (📷 menu, camera/library), CameraPicker,
+                        PhotoTextView (Printed via LiveTextImage / Handwriting via
+                        PhotoCropView + HandwritingReader); iOS only
   Display/              SearchField (shared field style, resetID trick), Clipboard
   CreditsView.swift     licenses
 Shared/                 both targets
@@ -231,7 +240,8 @@ Credit any new data in `CreditsView`.
   `AIProblem` turns each one into a clear title, message and fixes (Try again, Settings, an
   openrouter.ai link), and `AIProblemView` shows it. Add new failure cases there rather than
   showing a raw `localizedDescription`.
-- Only the looked-up words are sent. The privacy text in `AboutView` says so; keep it true.
+- Only the looked-up words, and the cropped part of a photo for handwriting, are sent. The
+  privacy text in `AboutView` says so; keep it true. Printed text in photos never leaves the device.
 
 ## 8. Working conventions
 

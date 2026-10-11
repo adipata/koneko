@@ -143,6 +143,11 @@ struct ContentView: View {
                 .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
                 .accessibilityLabel("Look up")
                 .help("Look up")
+                #if os(iOS)
+                PhotoTextButton(settings: settings, onText: { usePhotoText($0) }) {
+                    model.section = .settings
+                }
+                #endif
             }
         }
         .frame(maxWidth: 560)
@@ -197,6 +202,22 @@ struct ContentView: View {
         case .english: "Type a word in English"
         case .japanese: "日本語 or romaji"
         }
+    }
+
+    /// Words picked from a photo: shown in the text field and looked up.
+    private func usePhotoText(_ text: String) {
+        let lines = text
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        let joined = lines.joined(separator: " ")
+        // Japanese is written without spaces between lines.
+        let cleaned = JapaneseText.isJapanese(joined) ? lines.joined() : joined
+        if !JapaneseText.isJapanese(cleaned) {
+            settings.inputLanguage = .english
+        }
+        input = cleaned
+        lookUp()
     }
 
     private func lookUp() {

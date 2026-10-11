@@ -7,13 +7,15 @@ final class AppSettings {
         let id: String
         let name: String
         let note: String
+        /// It can read photos (used for handwriting).
+        var readsImages = true
     }
 
     static let modelOptions = [
         ModelOption(id: "google/gemini-3.7-flash", name: "Gemini 3.7 Flash", note: "Recommended: fast and good at Japanese"),
         ModelOption(id: "google/gemini-3.6-flash", name: "Gemini 3.6 Flash", note: "Previous Flash version"),
         ModelOption(id: "openai/gpt-5-mini", name: "GPT-5 mini", note: "Cheaper, a bit slower"),
-        ModelOption(id: "deepseek/deepseek-v3.2", name: "DeepSeek V3.2", note: "Very cheap"),
+        ModelOption(id: "deepseek/deepseek-v3.2", name: "DeepSeek V3.2", note: "Very cheap", readsImages: false),
     ]
 
     private enum Keys {
@@ -86,6 +88,12 @@ final class AppSettings {
     /// and romaji move to the Japanese side.
     var englishOnlyWordPrompts: Bool {
         didSet { defaults.set(englishOnlyWordPrompts, forKey: Keys.englishOnlyWordPrompts) }
+    }
+
+    /// The chosen model, or the default one if it can't read photos.
+    var imageModel: String {
+        let chosen = Self.modelOptions.first { $0.id == model }
+        return chosen?.readsImages == false ? Self.modelOptions[0].id : model
     }
 
     /// The word as it should appear on screen with the current writing settings.

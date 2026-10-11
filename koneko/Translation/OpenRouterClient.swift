@@ -57,23 +57,33 @@ nonisolated struct OpenRouterClient: Sendable {
     }
 
     /// Sends a chat request that must answer with JSON matching `schema`, and decodes it.
+    /// `imageJPEG`, when given, is sent with the user message (the model must accept images).
     func requestJSON<Output: Decodable & Sendable>(
         system: String,
         user: String,
+        imageJPEG: Data? = nil,
         schemaName: String,
         schema: [String: Any]
     ) async throws -> Output {
-        var request = URLRequest(url: Self.endpoint, timeoutInterval: 30)
+        var request = URLRequest(url: Self.endpoint, timeoutInterval: imageJPEG == nil ? 30 : 60)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Koneko", forHTTPHeaderField: "X-Title")
 
+        var userContent: Any = user
+        if let imageJPEG {
+            let parts: [[String: Any]] = [
+                ["type": "text", "text": user],
+                ["type": "image_url", "image_url": ["url": "data:image/jpeg;base64,\(imageJPEG.base64EncodedString())"]],
+            ]
+            userContent = parts
+        }
         let body: [String: Any] = [
             "model": model,
             "messages": [
                 ["role": "system", "content": system],
-                ["role": "user", "content": user],
+                ["role": "user", "content": userContent],
             ],
             "response_format": [
                 "type": "json_schema",
