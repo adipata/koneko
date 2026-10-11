@@ -246,6 +246,11 @@ struct KanjiDetailView: View {
                 HStack(spacing: 8) {
                     badge(info.grade == 7 ? "Secondary school" : "Grade \(info.grade)")
                     badge("\(info.strokes) strokes")
+                    CopyButton(text: info.character)
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.circle)
+                        .controlSize(.small)
                 }
             }
         }
