@@ -28,6 +28,7 @@ final class AppSettings {
         static let showFurigana = "showFurigana"
         static let smartReview = "smartReview"
         static let newCardsPerDay = "newCardsPerDay"
+        static let englishOnlyWordPrompts = "englishOnlyWordPrompts"
     }
 
     private let defaults = UserDefaults.standard
@@ -81,6 +82,12 @@ final class AppSettings {
         didSet { defaults.set(newCardsPerDay, forKey: Keys.newCardsPerDay) }
     }
 
+    /// English → 日本語 word cards (My words) show only the English on the front; the reading
+    /// and romaji move to the Japanese side.
+    var englishOnlyWordPrompts: Bool {
+        didSet { defaults.set(englishOnlyWordPrompts, forKey: Keys.englishOnlyWordPrompts) }
+    }
+
     /// The word as it should appear on screen with the current writing settings.
     func display(_ word: WordCandidate) -> WordCandidate {
         writingStyle.apply(to: word, kanjiLevel: kanjiLevel)
@@ -98,5 +105,6 @@ final class AppSettings {
         showFurigana = defaults.object(forKey: Keys.showFurigana) as? Bool ?? true
         smartReview = defaults.object(forKey: Keys.smartReview) as? Bool ?? true
         newCardsPerDay = defaults.object(forKey: Keys.newCardsPerDay) as? Int ?? 8
+        englishOnlyWordPrompts = defaults.bool(forKey: Keys.englishOnlyWordPrompts)
     }
 }

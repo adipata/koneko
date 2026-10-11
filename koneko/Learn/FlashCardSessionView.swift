@@ -41,6 +41,9 @@ struct FlashCardSessionView: View {
 
     private var mode: FlashMode { settings.smartReview ? chosenMode : .practice }
     private var isReviewing: Bool { mode == .review }
+    private var isWordDeck: Bool {
+        if case .words = deck { true } else { false }
+    }
     /// Restarts the session when the mode or direction changes.
     private var sessionID: String { "\(mode.rawValue)|\(direction.rawValue)" }
 
@@ -66,7 +69,7 @@ struct FlashCardSessionView: View {
                 }
 
                 if let card {
-                    FlashCardView(card: card, direction: direction, isFlipped: isFlipped)
+                    FlashCardView(card: card, direction: direction, isFlipped: isFlipped, detailWithAnswer: isWordDeck && settings.englishOnlyWordPrompts)
                         .aspectRatio(0.8, contentMode: .fit)
                         .frame(maxWidth: 420, maxHeight: 520)
                         .id(count)

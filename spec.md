@@ -46,7 +46,9 @@ Her main device is an iPad with an Apple Pencil.
   - OpenRouter API key (Keychain) and model
   - writing style: as adults write / kanji up to grade N / all hiragana / all katakana
   - furigana, romaji and romaji-in-lists toggles, auto-speak
-  - flash cards: Review mode on/off, new cards per day, reset review progress
+  - flash cards: Review mode on/off, new cards per day, reset review progress, and
+    "Only English on My words cards" (English → 日本語 word cards hide the reading and romaji
+    on the front and show them with the Japanese answer; `FlashCardView.detailWithAnswer`)
   - Apple Watch sync, and export/import of My words
   - About, which contains a personal French note from her father ("Tati"). **Do not
     translate or change it.**
