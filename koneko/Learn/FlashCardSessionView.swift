@@ -1,22 +1,5 @@
 import SwiftUI
 
-/// How a flash-card session deals its cards.
-enum FlashMode: String, CaseIterable, Identifiable {
-    /// Spaced repetition: due cards and a few new ones; she says whether she knew each card.
-    case review
-    /// Random cards forever, nothing remembered.
-    case practice
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .review: "🌱 Review"
-        case .practice: "🎲 Free practice"
-        }
-    }
-}
-
 /// A flash-card session from one deck, tap to flip.
 /// - Review: the cards that are due plus a few new ones; after turning a card over she answers
 ///   😺 I knew it (or swipe right) or 🌱 Not yet (or swipe left). Her garden shows how her cards grow.

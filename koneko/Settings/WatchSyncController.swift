@@ -38,6 +38,33 @@ final class WatchSyncController {
         }
     }
 
+    /// Shares her review progress so she can review on the watch. Call whenever it changes.
+    func updateReviews(_ reviews: ReviewStore, settings: AppSettings) {
+        guard settings.syncToWatch else { return }
+        let shared = WatchReviews(
+            states: reviews.states,
+            reviewMode: settings.smartReview,
+            newCardsPerDay: settings.newCardsPerDay,
+            resetAt: reviews.resetAt
+        )
+        do {
+            try CloudSync.save(shared, forKey: CloudSync.reviewsKey)
+        } catch {
+            status = error.localizedDescription
+            isError = true
+        }
+    }
+
+    /// Adds the answers she gave on the watch to her progress here. Safe to call often: answers
+    /// already added are skipped. The watch drops them once the progress it gets back has them.
+    func collectAnswers(into reviews: ReviewStore, settings: AppSettings) {
+        guard settings.syncToWatch,
+              let answers = CloudSync.load([WatchAnswer].self, forKey: CloudSync.answersKey),
+              !answers.isEmpty
+        else { return }
+        reviews.add(answers)
+    }
+
     private static var deviceKind: String {
         #if os(macOS)
         "Mac"

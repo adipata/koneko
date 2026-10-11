@@ -8,7 +8,10 @@ final class ReviewStore {
     private(set) var states: [String: ReviewState] = [:]
     /// Increases on every change.
     private(set) var revision = 0
+    /// When progress was last reset: older answers from the watch are ignored.
+    private(set) var resetAt: Date?
     private let fileURL: URL
+    private static let resetKey = "reviewsResetAt"
 
     init() {
         let folder = URL.applicationSupportDirectory
@@ -18,6 +21,7 @@ final class ReviewStore {
            let saved = try? JSONDecoder().decode([String: ReviewState].self, from: data) {
             states = saved
         }
+        resetAt = UserDefaults.standard.object(forKey: Self.resetKey) as? Date
     }
 
     func state(for key: String) -> ReviewState? {
@@ -31,28 +35,24 @@ final class ReviewStore {
 
     /// How many of `keys` she met for the first time today.
     func introducedToday(_ keys: [String]) -> Int {
-        let calendar = Calendar.current
-        return keys.filter { key in
-            states[key].map { calendar.isDateInToday($0.introduced) } ?? false
-        }.count
+        states.introducedToday(keys)
     }
 
     /// Her garden for these cards: sprouts, growing and blooming plants, and seeds not met yet.
     func garden(_ keys: [String]) -> Garden {
-        var garden = Garden()
-        for key in Set(keys) {
-            if let state = states[key] {
-                garden.counts[state.stage, default: 0] += 1
-            } else {
-                garden.seeds += 1
-            }
-        }
-        return garden
+        states.garden(keys)
+    }
+
+    /// Adds the answers she gave on the Apple Watch (see `[String: ReviewState].apply`).
+    func add(_ answers: [WatchAnswer]) {
+        if states.apply(answers, after: resetAt) { save() }
     }
 
     /// Forgets all review progress (Settings).
     func removeAll() {
         states = [:]
+        resetAt = .now
+        UserDefaults.standard.set(resetAt, forKey: Self.resetKey)
         save()
     }
 

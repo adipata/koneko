@@ -35,11 +35,13 @@ each character being written stroke by stroke.
 - **Flash cards:** Learn → Flash cards (iPhone/iPad/Mac) and Learn → 🃏 Flash cards (watch):
   endless random cards for hiragana, katakana or the kanji of a grade, 日本語 → English or
   English → 日本語; tap to flip, Next / swipe / Digital Crown for another. No scores.
-  **Review (spaced repetition, iPhone/iPad/Mac):** pick 🌱 Review at the top of a session to
+  **Review (spaced repetition, iPhone/iPad/Mac and watch):** pick 🌱 Review at the top of a session to
   get the cards that are due plus a few new ones (FSRS scheduling); answer 😺 I knew it or
   🌱 Not yet after turning a card over, and watch the garden grow (🌱 → 🌿 → 🌸). 🎲 Free
   practice keeps the endless random cards. Settings → Flash cards: on/off, new cards per day,
-  reset. The watch has Free practice only.
+  reset. On the watch, pick Mode → 🌱 Review in the flash-card menu: it uses the progress
+  synced from the phone/iPad (until that arrives, the menu says what to turn on), works offline, and its answers are added to the phone/iPad's
+  progress next time Koneko is open there.
   **Sets:** Learn → Select (Photos-style ticks; tap a row/column letter or "Select all" for a
   group; for kanji, search results, a category or a whole grade) → Save as set. One set can mix
   hiragana, katakana and kanji (switch charts while selecting). Sets can be started, edited,
