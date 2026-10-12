@@ -267,6 +267,9 @@ Credit any new data in `CreditsView`.
   It can be changed in Settings.
 - Prompts live in `TranslationPrompt` and `KanjiExplainer`. Results must be child-appropriate,
   with an emoji, kana readings per part, and romaji.
+- Models sometimes return valid JSON whose text field swallowed the rest of the answer
+  (`... ", "examples": [...]}` inside `explanation`). `KanjiExplanation.repaired()` cuts that
+  out and recovers the leaked fields; it runs on every new answer and on the saved cache at launch.
 - **Errors:** `OpenRouterClient` maps HTTP status codes and `URLError`s to `TranslationError`.
   `AIProblem` turns each one into a clear title, message and fixes (Try again, Settings, an
   openrouter.ai link), and `AIProblemView` shows it. Add new failure cases there rather than
