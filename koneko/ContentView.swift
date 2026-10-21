@@ -228,7 +228,7 @@ struct ContentView: View {
         heardAlternatives = []
         let isJapaneseScript = JapaneseText.isJapanese(text)
         lastLookupWasJapanese = isJapaneseScript
-        if isJapaneseScript, (Keychain.apiKey ?? "").isEmpty {
+        if isJapaneseScript, !settings.hasAPIKey {
             // Already written in Japanese and no AI available: show it directly.
             translator.reset()
             selectedWord = .direct(text)

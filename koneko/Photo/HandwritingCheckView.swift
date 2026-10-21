@@ -10,7 +10,7 @@ struct HandwritingCheckButton: View {
     let card: FlashCard
     /// A word from My words (rather than a kana or kanji she is learning).
     let isWord: Bool
-    let model: String
+    let model: AIModel
 
     @State private var showsCamera = false
     @State private var showsLibrary = false
@@ -73,7 +73,7 @@ struct HandwritingCheckView: View {
     let image: UIImage
     let card: FlashCard
     let isWord: Bool
-    let model: String
+    let model: AIModel
 
     @Environment(\.dismiss) private var dismiss
     @State private var cropRect = CGRect(x: 0.1, y: 0.3, width: 0.8, height: 0.4)
@@ -152,7 +152,7 @@ struct HandwritingCheckView: View {
             } catch is CancellationError {
                 return
             } catch {
-                problem = AIProblem(error)
+                problem = AIProblem(error, provider: model.provider)
             }
         }
     }

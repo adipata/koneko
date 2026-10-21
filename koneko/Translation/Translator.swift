@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Looks up Japanese words: from the on-device cache when possible, otherwise via OpenRouter.
+/// Looks up Japanese words: from the on-device cache when possible, otherwise via the AI.
 @Observable
 final class Translator {
     enum Status: Equatable {
@@ -28,13 +28,16 @@ final class Translator {
             status = .results(cached)
             return
         }
-        guard let apiKey = Keychain.apiKey, !apiKey.isEmpty else {
-            status = .failed(AIProblem(TranslationError.missingAPIKey))
+        let aiModel = settings.aiModel
+        let client: any AIClient
+        do {
+            client = try aiModel.client()
+        } catch {
+            status = .failed(AIProblem(error, provider: aiModel.provider))
             return
         }
 
         status = .loading
-        let client = OpenRouterClient(apiKey: apiKey, model: settings.model)
         currentTask = Task {
             do {
                 let candidates = try await client.translate(query, language: language)
@@ -48,7 +51,7 @@ final class Translator {
                 return
             } catch {
                 guard !Task.isCancelled else { return }
-                status = .failed(AIProblem(error))
+                status = .failed(AIProblem(error, provider: aiModel.provider))
             }
         }
     }

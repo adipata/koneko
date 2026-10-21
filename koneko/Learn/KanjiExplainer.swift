@@ -15,7 +15,7 @@ nonisolated struct KanjiExplanation: Codable, Sendable {
     var examples: [Example]
 }
 
-/// Asks OpenRouter to explain kanji (once each; answers are cached on the device).
+/// Asks the AI to explain kanji (once each; answers are cached on the device).
 @Observable
 final class KanjiExplainer {
     private(set) var explanations: [String: KanjiExplanation] = [:]
@@ -33,16 +33,14 @@ final class KanjiExplainer {
         }
     }
 
-    var hasAPIKey: Bool { !(Keychain.apiKey ?? "").isEmpty }
-
-    func explain(_ info: KanjiInfo, model: String) async {
+    func explain(_ info: KanjiInfo, model: AIModel) async {
         let key = info.character
-        guard explanations[key] == nil, !loading.contains(key), let apiKey = Keychain.apiKey, !apiKey.isEmpty else { return }
+        // Without an API key there is nothing to ask (the view says so).
+        guard explanations[key] == nil, !loading.contains(key), let client = try? model.client() else { return }
         loading.insert(key)
         errors[key] = nil
         defer { loading.remove(key) }
 
-        let client = OpenRouterClient(apiKey: apiKey, model: model)
         do {
             var result: KanjiExplanation = try await client.requestJSON(
                 system: Self.systemPrompt,
@@ -58,7 +56,7 @@ final class KanjiExplainer {
         } catch is CancellationError {
             return
         } catch {
-            errors[key] = AIProblem(error)
+            errors[key] = AIProblem(error, provider: model.provider)
         }
     }
 

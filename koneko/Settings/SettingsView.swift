@@ -11,8 +11,9 @@ struct SettingsView: View {
     var isInTab = false
 
     @Environment(\.dismiss) private var dismiss
-    @State private var apiKey = Keychain.apiKey ?? ""
-    @State private var savedKey = Keychain.apiKey ?? ""
+    /// The key being edited, for the chosen AI service.
+    @State private var apiKey: String
+    @State private var savedKey: String
     @State private var keyError: String?
     @State private var customModel = ""
     @State private var showCredits = false
@@ -25,6 +26,18 @@ struct SettingsView: View {
     @State private var dictionaryMessage: String?
     private let pronouncer = Pronouncer.shared
 
+    init(settings: AppSettings, translator: Translator, history: HistoryStore, watchSync: WatchSyncController, reviews: ReviewStore, isInTab: Bool = false) {
+        self.settings = settings
+        self.translator = translator
+        self.history = history
+        self.watchSync = watchSync
+        self.reviews = reviews
+        self.isInTab = isInTab
+        let key = Keychain.apiKey(for: settings.provider) ?? ""
+        _apiKey = State(initialValue: key)
+        _savedKey = State(initialValue: key)
+    }
+
     private var voiceDownloadHint: String {
         #if os(macOS)
         "For a nicer voice, download a Japanese voice such as Kyoko (Enhanced or Premium): System Settings → Accessibility → Spoken Content → System Voice → Manage Voices."
@@ -34,7 +47,7 @@ struct SettingsView: View {
     }
 
     private var isPresetModel: Bool {
-        AppSettings.modelOptions.contains { $0.id == settings.model }
+        settings.provider.modelOptions.contains { $0.id == settings.currentModel }
     }
 
     var body: some View {
@@ -60,7 +73,13 @@ struct SettingsView: View {
                     }
                 }
                 Section {
-                    SecureField("API key", text: $apiKey, prompt: Text("sk-or-…"))
+                    Picker("AI service", selection: $settings.provider) {
+                        ForEach(AIProvider.allCases) { provider in
+                            Text(provider.displayName).tag(provider)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    SecureField("API key", text: $apiKey, prompt: Text(settings.provider.keyPlaceholder))
                         .autocorrectionDisabled()
                         .onSubmit { saveKey() }
                     HStack {
@@ -69,16 +88,16 @@ struct SettingsView: View {
                         Button("Save key") { saveKey() }
                             .disabled(trimmedKey == savedKey)
                     }
-                    Link("Get a key at openrouter.ai/keys", destination: URL(string: "https://openrouter.ai/keys")!)
+                    Link("Get a key at \(settings.provider.website)", destination: settings.provider.keysURL)
                 } header: {
-                    Text("OpenRouter API key")
+                    Text("AI service and API key")
                 } footer: {
-                    Text("Stored securely in the Keychain on this device. Tip: give this key a small credit limit on OpenRouter.")
+                    Text("OpenRouter gives access to models from many companies with one key; Claude is Anthropic's own API. Each service keeps its own key, stored securely in the Keychain on this device. \(settings.provider.keyTip)")
                 }
 
                 Section {
-                    Picker("Model", selection: $settings.model) {
-                        ForEach(AppSettings.modelOptions) { option in
+                    Picker("Model", selection: $settings.currentModel) {
+                        ForEach(settings.provider.modelOptions) { option in
                             VStack(alignment: .leading) {
                                 Text(option.name)
                                 Text(option.note).font(.caption).foregroundStyle(.secondary)
@@ -86,22 +105,22 @@ struct SettingsView: View {
                             .tag(option.id)
                         }
                         if !isPresetModel {
-                            Text(settings.model).tag(settings.model)
+                            Text(settings.currentModel).tag(settings.currentModel)
                         }
                     }
                     .pickerStyle(.inline)
 
                     HStack {
-                        TextField("Other model", text: $customModel, prompt: Text("e.g. anthropic/claude-haiku-4.5"))
+                        TextField("Other model", text: $customModel, prompt: Text("e.g. \(settings.provider.customModelExample)"))
                             .autocorrectionDisabled()
                             .onSubmit(useCustomModel)
                         Button("Use", action: useCustomModel)
                             .disabled(customModel.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 } header: {
-                    Text("AI model")
+                    Text("AI model (\(settings.provider.displayName))")
                 } footer: {
-                    Text("Any model ID from openrouter.ai/models works.")
+                    Text(settings.provider.customModelHint)
                 }
 
                 Section {
@@ -234,6 +253,11 @@ struct SettingsView: View {
                 }
             }
             .onDisappear { saveKey() }
+            .onChange(of: settings.provider) { oldValue, newValue in
+                // Each service has its own key: keep the old one, show the new one.
+                saveKey(for: oldValue)
+                loadKey(for: newValue)
+            }
             .sheet(isPresented: $showCredits) { CreditsView() }
             .confirmationDialog(
                 "Reset review progress?",
@@ -343,15 +367,20 @@ struct SettingsView: View {
         }
     }
 
-    /// Saves the key if it changed. Returns false if saving failed.
+    /// Saves the key of the chosen service if it changed. Returns false if saving failed.
     @discardableResult
     private func saveKey() -> Bool {
+        saveKey(for: settings.provider)
+    }
+
+    @discardableResult
+    private func saveKey(for provider: AIProvider) -> Bool {
         let key = trimmedKey
         guard key != savedKey else { return true }
-        keyError = Keychain.setAPIKey(key)
+        keyError = Keychain.setAPIKey(key, for: provider)
         guard keyError == nil else { return false }
         // Read it back to be sure it's really stored.
-        savedKey = Keychain.apiKey ?? ""
+        savedKey = Keychain.apiKey(for: provider) ?? ""
         if savedKey != key {
             keyError = "The key was saved but couldn't be read back from the Keychain."
             return false
@@ -359,10 +388,17 @@ struct SettingsView: View {
         return true
     }
 
+    private func loadKey(for provider: AIProvider) {
+        let key = Keychain.apiKey(for: provider) ?? ""
+        apiKey = key
+        savedKey = key
+        keyError = nil
+    }
+
     private func useCustomModel() {
         let model = customModel.trimmingCharacters(in: .whitespaces)
         guard !model.isEmpty else { return }
-        settings.model = model
+        settings.currentModel = model
         customModel = ""
     }
 }

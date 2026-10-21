@@ -8,7 +8,7 @@ import VisionKit
 struct PhotoTextView: View {
     let image: UIImage
     /// The AI model that reads handwriting.
-    let model: String
+    let model: AIModel
     let onText: (String) -> Void
     let openSettings: () -> Void
 
@@ -174,7 +174,7 @@ struct PhotoTextView: View {
             } catch is CancellationError {
                 return
             } catch {
-                problem = AIProblem(error)
+                problem = AIProblem(error, provider: model.provider)
             }
         }
     }

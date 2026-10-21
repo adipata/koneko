@@ -1,17 +1,16 @@
 #if os(iOS)
 import UIKit
 
-/// Reads handwriting from a cropped photo with the AI (OpenRouter), since Apple's on-device
+/// Reads handwriting from a cropped photo with the AI, since Apple's on-device
 /// text recognition only reads printed Japanese reliably. Only the cropped part is sent.
 enum HandwritingReader {
     private nonisolated struct ReadText: Decodable, Sendable {
         let text: String
     }
 
-    static func read(_ image: UIImage, model: String) async throws -> String {
-        guard let apiKey = Keychain.apiKey, !apiKey.isEmpty else { throw TranslationError.missingAPIKey }
+    static func read(_ image: UIImage, model: AIModel) async throws -> String {
+        let client = try model.client()
         guard let jpeg = image.jpegData(compressionQuality: 0.8) else { throw TranslationError.badResponse }
-        let client = OpenRouterClient(apiKey: apiKey, model: model)
         let result: ReadText = try await client.requestJSON(
             system: systemPrompt,
             user: "Read the text in this photo.",

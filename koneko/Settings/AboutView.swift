@@ -55,7 +55,7 @@ struct AboutView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Label("Privacy", systemImage: "hand.raised.fill")
                         .font(.headline)
-                    Text("Speech is recognised on the device whenever possible. Printed words in photos are read on the device. Only the words you look up, and the part of a photo you crop to read or check handwriting, are sent to the AI service you choose (through OpenRouter). Your word list stays on your devices and in your own iCloud.")
+                    Text("Speech is recognised on the device whenever possible. Printed words in photos are read on the device. Only the words you look up, and the part of a photo you crop to read or check handwriting, are sent to the AI service you choose in Settings (OpenRouter, or Anthropic's Claude API). Your word list stays on your devices and in your own iCloud.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
