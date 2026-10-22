@@ -276,6 +276,9 @@ Credit any new data in `CreditsView`.
   OpenRouter, Claude Opus 5.5 on Claude). It can be changed in Settings.
 - Prompts live in `TranslationPrompt` and `KanjiExplainer`. Results must be child-appropriate,
   with an emoji, kana readings per part, and romaji.
+- Models sometimes return valid JSON whose text field swallowed the rest of the answer
+  (`... ", "examples": [...]}` inside `explanation`). `KanjiExplanation.repaired()` cuts that
+  out and recovers the leaked fields; it runs on every new answer and on the saved cache at launch.
 - **Errors:** each client maps HTTP status codes and `URLError`s to `TranslationError`
   (`ClaudeClient` also maps `stop_reason: "refusal"` to `.refused`). `AIProblem(error,
   provider:)` turns each one into a clear title, message and fixes (Try again, Settings, a

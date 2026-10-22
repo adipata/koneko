@@ -1,7 +1,7 @@
 import Foundation
 
 /// A child-friendly explanation of a kanji, written by the AI and saved on the device.
-nonisolated struct KanjiExplanation: Codable, Sendable {
+nonisolated struct KanjiExplanation: Codable, Sendable, Equatable {
     nonisolated struct Example: Codable, Sendable, Hashable {
         var word: String
         var reading: String
@@ -13,6 +13,63 @@ nonisolated struct KanjiExplanation: Codable, Sendable {
     var explanation: String
     var memoryTip: String
     var examples: [Example]
+}
+
+extension KanjiExplanation {
+    /// Some models break the JSON: they close a text field too late, so the rest of the answer
+    /// (`", "examples": [...]}`) ends up inside that text. This cuts the leaked JSON out of the
+    /// texts and recovers the fields it held, so the card shows the word list, not raw JSON.
+    /// It also tidies the examples (hiragana readings, drops words that aren't Japanese).
+    nonisolated func repaired() -> KanjiExplanation {
+        var result = self
+        var leaked: [String: Any] = [:]
+        result.emoji = Self.cutLeakedJSON(from: emoji, into: &leaked)
+        result.meaning = Self.cutLeakedJSON(from: meaning, into: &leaked)
+        result.explanation = Self.cutLeakedJSON(from: explanation, into: &leaked)
+        result.memoryTip = Self.cutLeakedJSON(from: memoryTip, into: &leaked)
+
+        if result.emoji.isEmpty, let value = leaked["emoji"] as? String { result.emoji = Self.trimmed(value) }
+        if result.meaning.isEmpty, let value = leaked["meaning"] as? String { result.meaning = Self.trimmed(value) }
+        if result.explanation.isEmpty, let value = leaked["explanation"] as? String { result.explanation = Self.trimmed(value) }
+        if result.memoryTip.isEmpty, let value = leaked["memoryTip"] as? String { result.memoryTip = Self.trimmed(value) }
+        if result.examples.isEmpty, let items = leaked["examples"] as? [[String: Any]] {
+            result.examples = items.compactMap { item in
+                guard let word = item["word"] as? String, let reading = item["reading"] as? String else { return nil }
+                return Example(word: word, reading: reading, meaning: item["meaning"] as? String ?? "")
+            }
+        }
+
+        result.examples = result.examples
+            .map { Example(word: Self.trimmed($0.word), reading: JapaneseText.hiragana(Self.trimmed($0.reading)), meaning: Self.trimmed($0.meaning)) }
+            .filter { JapaneseText.isKana($0.reading) && JapaneseText.isJapanese($0.word) }
+        return result
+    }
+
+    /// Returns the text before a leaked `", "field":` marker, and parses the JSON after it into `leaked`.
+    private nonisolated static func cutLeakedJSON(from text: String, into leaked: inout [String: Any]) -> String {
+        // Undo leftover escaping (`\"`) so the marker is found whichever way the model wrote it.
+        let plain = text.replacingOccurrences(of: "\\\"", with: "\"")
+        let marker = #"\s*,\s*"(emoji|meaning|explanation|memoryTip|examples)"\s*:"#
+        guard let found = plain.range(of: marker, options: .regularExpression),
+              let keyStart = plain[found].firstIndex(of: "\"")
+        else { return text }
+
+        // The leaked part may or may not keep its closing brace; try a few endings.
+        let tail = String(plain[keyStart...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = tail.trimmingCharacters(in: CharacterSet(charactersIn: "}\" \n\t"))
+        for candidate in ["{" + tail, "{" + tail + "}", "{" + body + "}", "{" + body + "\"}", "{" + body + "]}"] {
+            if let object = try? JSONSerialization.jsonObject(with: Data(candidate.utf8)) as? [String: Any] {
+                leaked.merge(object) { current, _ in current }
+                break
+            }
+        }
+        return trimmed(String(plain[..<found.lowerBound]))
+    }
+
+    /// Drops stray quotes, commas and spaces left around a cut text.
+    private nonisolated static func trimmed(_ text: String) -> String {
+        text.trimmingCharacters(in: CharacterSet(charactersIn: "\"“”, \n\t"))
+    }
 }
 
 /// Asks the AI to explain kanji (once each; answers are cached on the device).
@@ -29,7 +86,9 @@ final class KanjiExplainer {
         fileURL = folder.appending(path: "kanji_explanations.json")
         if let data = try? Data(contentsOf: fileURL),
            let saved = try? JSONDecoder().decode([String: KanjiExplanation].self, from: data) {
-            explanations = saved
+            // Repair answers saved before the leaked-JSON fix, so old broken cards fix themselves.
+            explanations = saved.mapValues { $0.repaired() }
+            if explanations != saved { save() }
         }
     }
 
@@ -42,16 +101,13 @@ final class KanjiExplainer {
         defer { loading.remove(key) }
 
         do {
-            var result: KanjiExplanation = try await client.requestJSON(
+            let result: KanjiExplanation = try await client.requestJSON(
                 system: Self.systemPrompt,
                 user: Self.userMessage(for: info),
                 schemaName: "kanji_explanation",
                 schema: Self.schema
             )
-            result.examples = result.examples
-                .map { .init(word: $0.word, reading: JapaneseText.hiragana($0.reading), meaning: $0.meaning) }
-                .filter { JapaneseText.isKana($0.reading) && JapaneseText.isJapanese($0.word) }
-            explanations[key] = result
+            explanations[key] = result.repaired()
             save()
         } catch is CancellationError {
             return
