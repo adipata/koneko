@@ -10,51 +10,56 @@ nonisolated struct AIProblem: Equatable, Sendable {
     var canRetry = true
     /// The fix is in Koneko's Settings (API key, model).
     var needsSettings = false
-    /// The fix is on the OpenRouter website (credit, key limit).
+    /// The fix is on the AI service's website (credit, key limit).
     var link: URL?
+    /// The button that opens `link`.
+    var linkTitle = "Open website"
 
-    private static let creditsURL = URL(string: "https://openrouter.ai/settings/credits")
-    private static let keysURL = URL(string: "https://openrouter.ai/settings/keys")
     private static let worksOffline = "Words you looked up before still work."
 
-    init(title: String, message: String, systemImage: String, canRetry: Bool = true, needsSettings: Bool = false, link: URL? = nil) {
+    init(title: String, message: String, systemImage: String, canRetry: Bool = true, needsSettings: Bool = false, link: URL? = nil, linkTitle: String = "Open website") {
         self.title = title
         self.message = message
         self.systemImage = systemImage
         self.canRetry = canRetry
         self.needsSettings = needsSettings
         self.link = link
+        self.linkTitle = linkTitle
     }
 
-    init(_ error: Error) {
+    /// `provider`: the service that was asked, so the message names it and links to its website.
+    init(_ error: Error, provider: AIProvider? = nil) {
         guard let error = error as? TranslationError else {
             self.init(title: "Something went wrong", message: error.localizedDescription, systemImage: "exclamationmark.triangle")
             return
         }
+        let service = provider?.displayName ?? "The AI service"
+        let site = provider?.website ?? "the AI service's website"
+        let linkTitle = provider.map { "Open \($0.displayName)" } ?? "Open website"
         switch error {
         case .missingAPIKey:
             self.init(
                 title: "The AI helper isn't set up yet",
-                message: "A grown-up needs to add an OpenRouter API key in Settings.",
+                message: "A grown-up needs to add \(provider.map { "a \($0.displayName) API key" } ?? "an AI API key") in Settings.",
                 systemImage: "key", canRetry: false, needsSettings: true
             )
         case .invalidAPIKey:
             self.init(
                 title: "The AI key doesn't work",
-                message: "OpenRouter didn't accept the API key. A grown-up can check or replace it in Settings.",
-                systemImage: "key.slash", canRetry: false, needsSettings: true, link: Self.keysURL
+                message: "\(service) didn't accept the API key. A grown-up can check or replace it in Settings.",
+                systemImage: "key.slash", canRetry: false, needsSettings: true, link: provider?.keysURL, linkTitle: linkTitle
             )
         case .outOfCredits:
             self.init(
                 title: "The AI helper is out of credit",
-                message: "The OpenRouter account has no credit left. A grown-up can add credit on openrouter.ai. \(Self.worksOffline)",
-                systemImage: "creditcard.trianglebadge.exclamationmark", canRetry: false, link: Self.creditsURL
+                message: "The \(provider?.displayName ?? "AI") account has no credit left. A grown-up can add credit on \(site). \(Self.worksOffline)",
+                systemImage: "creditcard.trianglebadge.exclamationmark", canRetry: false, link: provider?.creditsURL, linkTitle: linkTitle
             )
         case .keyLimitReached:
             self.init(
                 title: "The AI key reached its spending limit",
-                message: "A grown-up can raise the key's limit on openrouter.ai, or use another key in Settings. \(Self.worksOffline)",
-                systemImage: "gauge.with.dots.needle.100percent", canRetry: false, needsSettings: true, link: Self.keysURL
+                message: "A grown-up can raise the limit on \(site), or use another key in Settings. \(Self.worksOffline)",
+                systemImage: "gauge.with.dots.needle.100percent", canRetry: false, needsSettings: true, link: provider?.keysURL, linkTitle: linkTitle
             )
         case .rateLimited:
             self.init(
@@ -83,7 +88,7 @@ nonisolated struct AIProblem: Equatable, Sendable {
         case .server(let status, let message):
             self.init(
                 title: "The AI service had a problem",
-                message: "OpenRouter error \(status): \(message)",
+                message: "\(service) error \(status): \(message)",
                 systemImage: "exclamationmark.icloud"
             )
         case .badResponse:
@@ -107,7 +112,7 @@ nonisolated struct AIProblem: Equatable, Sendable {
         case .cannotReach:
             self.init(
                 title: "Can't reach the AI service",
-                message: "OpenRouter can't be reached. Check the internet connection (some Wi-Fi networks block it) or try again later.",
+                message: "\(service) can't be reached. Check the internet connection (some Wi-Fi networks block it) or try again later.",
                 systemImage: "network.slash"
             )
         case .network(let message):
@@ -145,7 +150,7 @@ struct AIProblemView: View {
                 }
                 if let link = problem.link {
                     Link(destination: link) {
-                        Label("Open OpenRouter", systemImage: "safari")
+                        Label(problem.linkTitle, systemImage: "safari")
                     }
                 }
             }

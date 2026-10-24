@@ -1,25 +1,12 @@
 import SwiftUI
 
-/// User preferences, stored in UserDefaults. (The API key lives in the Keychain.)
+/// User preferences, stored in UserDefaults. (The API keys live in the Keychain.)
 @Observable
 final class AppSettings {
-    struct ModelOption: Identifiable, Hashable {
-        let id: String
-        let name: String
-        let note: String
-        /// It can read photos (used for handwriting).
-        var readsImages = true
-    }
-
-    static let modelOptions = [
-        ModelOption(id: "google/gemini-3.7-flash", name: "Gemini 3.7 Flash", note: "Recommended: fast and good at Japanese"),
-        ModelOption(id: "google/gemini-3.6-flash", name: "Gemini 3.6 Flash", note: "Previous Flash version"),
-        ModelOption(id: "openai/gpt-5-mini", name: "GPT-5 mini", note: "Cheaper, a bit slower"),
-        ModelOption(id: "deepseek/deepseek-v3.2", name: "DeepSeek V3.2", note: "Very cheap", readsImages: false),
-    ]
-
     private enum Keys {
+        static let provider = "aiProvider"
         static let model = "model"
+        static let claudeModel = "claudeModel"
         static let inputLanguage = "inputLanguage"
         static let showRomaji = "showRomaji"
         static let showRomajiInLists = "showRomajiInLists"
@@ -35,8 +22,37 @@ final class AppSettings {
 
     private let defaults = UserDefaults.standard
 
+    /// The AI service in use (OpenRouter or the Claude API). Its key is in the Keychain.
+    var provider: AIProvider {
+        didSet { defaults.set(provider.rawValue, forKey: Keys.provider) }
+    }
+
+    /// The OpenRouter model.
     var model: String {
         didSet { defaults.set(model, forKey: Keys.model) }
+    }
+
+    /// The Claude model.
+    var claudeModel: String {
+        didSet { defaults.set(claudeModel, forKey: Keys.claudeModel) }
+    }
+
+    /// The model of the chosen service (each service remembers its own).
+    var currentModel: String {
+        get { provider == .claude ? claudeModel : model }
+        set {
+            if provider == .claude { claudeModel = newValue } else { model = newValue }
+        }
+    }
+
+    /// The chosen service and model, ready to ask.
+    var aiModel: AIModel {
+        AIModel(provider: provider, id: currentModel)
+    }
+
+    /// A key is saved for the chosen service.
+    var hasAPIKey: Bool {
+        !(Keychain.apiKey(for: provider) ?? "").isEmpty
     }
 
     var inputLanguage: InputLanguage {
@@ -90,10 +106,10 @@ final class AppSettings {
         didSet { defaults.set(englishOnlyWordPrompts, forKey: Keys.englishOnlyWordPrompts) }
     }
 
-    /// The chosen model, or the default one if it can't read photos.
-    var imageModel: String {
-        let chosen = Self.modelOptions.first { $0.id == model }
-        return chosen?.readsImages == false ? Self.modelOptions[0].id : model
+    /// The chosen model, or the service's default one if it can't read photos.
+    var imageModel: AIModel {
+        let chosen = provider.modelOptions.first { $0.id == currentModel }
+        return AIModel(provider: provider, id: chosen?.readsImages == false ? provider.defaultModel : currentModel)
     }
 
     /// The word as it should appear on screen with the current writing settings.
@@ -102,7 +118,9 @@ final class AppSettings {
     }
 
     init() {
-        model = defaults.string(forKey: Keys.model) ?? Self.modelOptions[0].id
+        provider = defaults.string(forKey: Keys.provider).flatMap { AIProvider(rawValue: $0) } ?? .openRouter
+        model = defaults.string(forKey: Keys.model) ?? AIProvider.openRouter.defaultModel
+        claudeModel = defaults.string(forKey: Keys.claudeModel) ?? AIProvider.claude.defaultModel
         inputLanguage = defaults.string(forKey: Keys.inputLanguage).flatMap { InputLanguage(rawValue: $0) } ?? .english
         showRomaji = defaults.object(forKey: Keys.showRomaji) as? Bool ?? true
         showRomajiInLists = defaults.object(forKey: Keys.showRomajiInLists) as? Bool ?? true

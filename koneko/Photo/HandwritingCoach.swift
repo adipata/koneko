@@ -2,7 +2,7 @@
 import UIKit
 
 /// Advice on what she wrote by hand for an English → 日本語 flash card (a word, a kana or a
-/// kanji): the AI (OpenRouter) looks at the cropped photo and compares it with the card, first
+/// kanji): the AI looks at the cropped photo and compares it with the card, first
 /// the word as a whole, then the shape of each character.
 nonisolated struct HandwritingAdvice: Decodable, Sendable {
     struct CharacterAdvice: Decodable, Sendable, Hashable {
@@ -25,10 +25,9 @@ nonisolated struct HandwritingAdvice: Decodable, Sendable {
 enum HandwritingCoach {
     /// `isWord`: a word from My words, where hiragana for a kanji is fine. Otherwise it's a kana
     /// or kanji she is learning, and she must write exactly that character.
-    static func check(_ image: UIImage, card: FlashCard, isWord: Bool, model: String) async throws -> HandwritingAdvice {
-        guard let apiKey = Keychain.apiKey, !apiKey.isEmpty else { throw TranslationError.missingAPIKey }
+    static func check(_ image: UIImage, card: FlashCard, isWord: Bool, model: AIModel) async throws -> HandwritingAdvice {
+        let client = try model.client()
         guard let jpeg = image.jpegData(compressionQuality: 0.8) else { throw TranslationError.badResponse }
-        let client = OpenRouterClient(apiKey: apiKey, model: model)
         var user = isWord ? """
         The flash card showed the English: \(card.english)
         The expected Japanese word: \(card.japanese)

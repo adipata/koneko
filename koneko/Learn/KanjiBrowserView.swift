@@ -224,7 +224,7 @@ struct KanjiDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .task(id: info.character) {
-            await explainer.explain(info, model: model.settings.model)
+            await explainer.explain(info, model: model.settings.aiModel)
         }
     }
 
@@ -333,11 +333,11 @@ struct KanjiDetailView: View {
                 ProgressView("Asking for a nice explanation…")
             } else if let problem = explainer.errors[info.character] {
                 AIProblemView(problem: problem, retry: {
-                    Task { await explainer.explain(info, model: model.settings.model) }
+                    Task { await explainer.explain(info, model: model.settings.aiModel) }
                 })
                 .frame(maxWidth: .infinity)
-            } else if !explainer.hasAPIKey {
-                Text("Add an OpenRouter key in Settings to get a friendly explanation with example words.")
+            } else if !model.settings.hasAPIKey {
+                Text("Add an AI API key in Settings to get a friendly explanation with example words.")
                     .foregroundStyle(.secondary)
             }
         }

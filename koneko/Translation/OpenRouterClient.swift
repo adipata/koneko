@@ -1,67 +1,17 @@
 import Foundation
 
-/// Everything that can go wrong when asking the AI (OpenRouter).
-/// `AIProblem` turns each case into a clear message for the screen.
-nonisolated enum TranslationError: LocalizedError, Equatable {
-    case missingAPIKey
-    case invalidAPIKey
-    /// The OpenRouter account has no credit left (HTTP 402).
-    case outOfCredits
-    /// The API key's own spending limit is reached.
-    case keyLimitReached
-    case rateLimited
-    /// The chosen model doesn't exist (any more) or has no provider.
-    case modelUnavailable
-    /// OpenRouter or the model's provider is down or overloaded (5xx).
-    case serviceDown
-    /// The request was refused, e.g. by moderation.
-    case refused(String)
-    case server(status: Int, message: String)
-    case badResponse
-    /// No internet connection at all.
-    case offline
-    /// The request took too long.
-    case timedOut
-    /// There is a connection, but OpenRouter can't be reached.
-    case cannotReach
-    /// Another network problem.
-    case network(String)
-
-    var errorDescription: String? {
-        let problem = AIProblem(self)
-        return "\(problem.title). \(problem.message)"
-    }
-}
-
 /// Minimal client for OpenRouter's OpenAI-compatible chat completions endpoint.
-nonisolated struct OpenRouterClient: Sendable {
+nonisolated struct OpenRouterClient: AIClient {
     static let endpoint = URL(string: "https://openrouter.ai/api/v1/chat/completions")!
 
     let apiKey: String
     let model: String
     var session: URLSession = .shared
 
-    func translate(_ text: String, language: InputLanguage) async throws -> [WordCandidate] {
-        let result: TranslationResult = try await requestJSON(
-            system: TranslationPrompt.system,
-            user: TranslationPrompt.userMessage(for: text, language: language),
-            schemaName: "japanese_words",
-            schema: TranslationPrompt.schema
-        )
-        var seen = Set<String>()
-        return result.candidates
-            .compactMap { $0.validated() }
-            .filter { seen.insert($0.japanese).inserted }
-            .prefix(4)
-            .map { $0 }
-    }
-
-    /// Sends a chat request that must answer with JSON matching `schema`, and decodes it.
-    /// `imageJPEG`, when given, is sent with the user message (the model must accept images).
     func requestJSON<Output: Decodable & Sendable>(
         system: String,
         user: String,
-        imageJPEG: Data? = nil,
+        imageJPEG: Data?,
         schemaName: String,
         schema: [String: Any]
     ) async throws -> Output {
@@ -100,7 +50,7 @@ nonisolated struct OpenRouterClient: Sendable {
         do {
             (data, response) = try await session.data(for: request)
         } catch let error as URLError {
-            throw Self.error(for: error)
+            throw AIClientSupport.error(for: error)
         }
 
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -110,7 +60,7 @@ nonisolated struct OpenRouterClient: Sendable {
 
         let completion = try? JSONDecoder().decode(ChatCompletion.self, from: data)
         guard let content = completion?.choices.first?.message.content,
-              let result: Output = Self.decodeJSON(content)
+              let result: Output = AIClientSupport.decodeJSON(content)
         else {
             // OpenRouter sometimes answers 200 with an error inside (e.g. the provider failed).
             if let detail = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
@@ -119,22 +69,6 @@ nonisolated struct OpenRouterClient: Sendable {
             throw TranslationError.badResponse
         }
         return result
-    }
-
-    private static func error(for error: URLError) -> Error {
-        switch error.code {
-        case .cancelled:
-            return CancellationError()
-        case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed, .internationalRoamingOff, .callIsActive:
-            return TranslationError.offline
-        case .timedOut:
-            return TranslationError.timedOut
-        case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed, .secureConnectionFailed,
-             .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateNotYetValid:
-            return TranslationError.cannotReach
-        default:
-            return TranslationError.network(error.localizedDescription)
-        }
     }
 
     /// Maps OpenRouter's HTTP status codes (https://openrouter.ai/docs/api-reference/errors).
@@ -166,25 +100,12 @@ nonisolated struct OpenRouterClient: Sendable {
         }
     }
 
-    /// Parses the model's JSON, tolerating a surrounding ```json fence.
-    static func decodeJSON<Output: Decodable>(_ content: String) -> Output? {
-        var json = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let start = json.firstIndex(of: "{"), let end = json.lastIndex(of: "}") {
-            json = String(json[start...end])
-        }
-        return try? JSONDecoder().decode(Output.self, from: Data(json.utf8))
-    }
-
     private static func errorMessage(in data: Data) -> String {
         if let error = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
             return error.error.message
         }
         return String(decoding: data.prefix(200), as: UTF8.self)
     }
-}
-
-nonisolated struct TranslationResult: Decodable, Sendable {
-    let candidates: [WordCandidate]
 }
 
 private nonisolated struct ChatCompletion: Decodable {

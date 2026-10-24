@@ -18,7 +18,8 @@ Her main device is an iPad with an Apple Pencil.
     (`HandwritingReader`, image input via `requestJSON(imageJPEG:)`, using
     `AppSettings.imageModel`, which skips models that can't read images). The text then goes
     into the field and is looked up.
-  - English is translated through OpenRouter, which returns several candidates.
+  - English is translated by an LLM (through OpenRouter or the Claude API), which returns
+    several candidates.
   - Japanese typed directly is shown as is, with no AI call if it's offline.
   - The word card shows:
     - an emoji, the word with furigana (wrapping `FuriganaText`), romaji and meaning
@@ -57,7 +58,7 @@ Her main device is an iPad with an Apple Pencil.
     katakana and kanji (`FlashSet.symbols`, each a `FlashSymbol` with its kind). Old
     single-kind sets (`kind` + `items`) still decode.
 - **Settings**:
-  - OpenRouter API key (Keychain) and model
+  - AI service (OpenRouter or Claude), its API key (Keychain, one per service) and model
   - writing style: as adults write / kanji up to grade N / all hiragana / all katakana
   - furigana, romaji and romaji-in-lists toggles, auto-speak
   - flash cards: Review mode on/off, new cards per day, reset review progress, and
@@ -123,7 +124,9 @@ koneko/                 app target
   App/                  AppModel (shared state), RootView (TabView .sidebarAdaptable,
                         splash, watch-sync onChange), SplashView (+ AppInfo version text)
   ContentView.swift     Write screen
-  Translation/          OpenRouterClient (requestJSON<Output> with strict json_schema),
+  Translation/          AIClient (protocol, AIProvider, AIModel, TranslationError),
+                        OpenRouterClient (strict json_schema response_format),
+                        ClaudeClient (Messages API, output_config.format),
                         TranslationPrompt, Translator (status, cache), WordCardView
   Speech/               SpeechInput / SpeechEngine (SFSpeechRecognizer + AVAudioEngine,
                         recreated per recording, AsyncStream updates), HoldToTalkButton
@@ -259,18 +262,28 @@ docs/AppleWatch.md      watch setup and run instructions
 
 Credit any new data in `CreditsView`.
 
-## 7. AI (OpenRouter)
+## 7. AI (OpenRouter or Claude API)
 
-- Chat completions with `response_format` = strict `json_schema`, through
-  `OpenRouterClient.requestJSON<Output>`.
-- The default model is the first entry of `AppSettings.modelOptions` (a Gemini Flash model).
-  It can be changed in Settings.
+- Two services (`AIProvider`): **OpenRouter** (OpenAI-compatible chat completions with
+  `response_format` = strict `json_schema`) and the **Claude API** (Anthropic's Messages
+  endpoint, `output_config.format` = `json_schema`, `effort: low`). Both implement the
+  `AIClient` protocol (`requestJSON<Output>`); prompts and schemas are shared.
+- `AppSettings.provider` selects the service; each service remembers its own model
+  (`model` for OpenRouter, `claudeModel` for Claude; `currentModel` / `aiModel` give the
+  active one). Each service has its own API key in the Keychain (`Keychain.apiKey(for:)`).
+  Callers get a client with `AIModel.client()`, which throws `missingAPIKey`.
+- The default model is the first entry of `AIProvider.modelOptions` (a Gemini Flash model on
+  OpenRouter, Claude Opus 5.5 on Claude). It can be changed in Settings.
 - Prompts live in `TranslationPrompt` and `KanjiExplainer`. Results must be child-appropriate,
   with an emoji, kana readings per part, and romaji.
-- **Errors:** `OpenRouterClient` maps HTTP status codes and `URLError`s to `TranslationError`.
-  `AIProblem` turns each one into a clear title, message and fixes (Try again, Settings, an
-  openrouter.ai link), and `AIProblemView` shows it. Add new failure cases there rather than
-  showing a raw `localizedDescription`.
+- Models sometimes return valid JSON whose text field swallowed the rest of the answer
+  (`... ", "examples": [...]}` inside `explanation`). `KanjiExplanation.repaired()` cuts that
+  out and recovers the leaked fields; it runs on every new answer and on the saved cache at launch.
+- **Errors:** each client maps HTTP status codes and `URLError`s to `TranslationError`
+  (`ClaudeClient` also maps `stop_reason: "refusal"` to `.refused`). `AIProblem(error,
+  provider:)` turns each one into a clear title, message and fixes (Try again, Settings, a
+  link to the service's website), and `AIProblemView` shows it. Add new failure cases there
+  rather than showing a raw `localizedDescription`.
 - Only the looked-up words, and the cropped part of a photo for reading or checking handwriting, are sent. The
   privacy text in `AboutView` says so; keep it true. Printed text in photos never leaves the device.
 

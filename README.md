@@ -8,8 +8,8 @@ each character being written stroke by stroke.
 - **Phase 1 (done):** tap a character and watch an animated stroke-order diagram with stroke
   numbers, play/pause, step, replay and speed control.
 - **Phase 2 (done):** type a word in English (or Japanese/romaji); an LLM via
-  [OpenRouter](https://openrouter.ai) suggests Japanese words with emoji, furigana, romaji and
-  meaning. Results are cached on the device. Japanese typed directly skips the LLM.
+  [OpenRouter](https://openrouter.ai) or Anthropic's [Claude API](https://platform.claude.com)
+  suggests Japanese words with emoji, furigana, romaji and meaning. Results are cached on the device. Japanese typed directly skips the LLM.
 - **Phase 3 (done):** hold-to-talk speech input (on-device where supported) with live
   transcript and "Or did you say…" alternatives.
 - **Words from a photo (iPhone/iPad):** the 📷 button on Write takes or picks a photo.
@@ -60,8 +60,9 @@ each character being written stroke by stroke.
 
 ## Setup
 
-Open Settings (gear icon) in the app and paste an OpenRouter API key. It is stored in the
-Keychain. The model can be changed there too (default: `google/gemini-3.7-flash`).
+Open Settings (gear icon) in the app, choose the AI service (OpenRouter or Claude) and paste
+its API key. Keys are stored in the Keychain, one per service. The model can be changed there
+too (defaults: `google/gemini-3.7-flash` on OpenRouter, `claude-opus-5-5` on Claude).
 
 ## Data and fonts
 
