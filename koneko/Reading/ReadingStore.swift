@@ -55,6 +55,11 @@ nonisolated struct ReadingExplanation: Codable, Hashable, Sendable {
     var explanation: String
     var words: [Word]
     var kanji: [Kanji]
+
+    /// Nothing to show (the AI's answer came back empty).
+    var isEmpty: Bool {
+        translation.isEmpty && kana.isEmpty && explanation.isEmpty && words.isEmpty && kanji.isEmpty
+    }
 }
 
 /// One scanned word or phrase of a reading.
@@ -131,6 +136,13 @@ final class ReadingStore {
         if let index = readings.firstIndex(where: { $0.id == id }), index > 0 {
             readings.insert(readings.remove(at: index), at: 0)
             save()
+        }
+    }
+
+    func setExplanation(_ explanation: ReadingExplanation, of entryID: ReadingEntry.ID, in id: Reading.ID) {
+        update(id) { reading in
+            guard let index = reading.entries.firstIndex(where: { $0.id == entryID }) else { return }
+            reading.entries[index].explanation = explanation
         }
     }
 

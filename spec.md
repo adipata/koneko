@@ -70,6 +70,11 @@ Her main device is an iPad with an Apple Pencil.
     panel; stored, never shown), `translation`, `kana`, `explanation` (one paragraph on how it's
     built), `words` and `kanji`. The explanation is stored in the entry for review, and is
     **never** sent back as context.
+  - Answers are decoded tolerantly and repaired (`Answer.repaired()`: leaked JSON inside a text
+    field, like `KanjiExplanation.repaired()`). An answer with text but no explanation is asked
+    once more, then fails with `.badResponse`; it is never saved empty. A saved part has
+    "Explain again" (toolbar; a prominent box when the explanation is missing), which re-asks
+    with its text, its scene and the parts before it.
   - `ReadingEntryContent` shows it; the texts use `SelectableText` (a non-editable
     `UITextView`) because SwiftUI's `.textSelection` can't select part of a text on iOS. Its
     edit menu adds "Look up in Write" (`AppModel.lookUp`). Each row of Words and Kanji has a

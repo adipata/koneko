@@ -44,11 +44,15 @@ struct ReadingsView: View {
                 case .reading(let id):
                     ReadingDetailView(model: model, readingID: id)
                 case .entry(let readingID, let entryID):
-                    if let entry = store.reading(readingID)?.entries.first(where: { $0.id == entryID }) {
-                        ReadingEntryView(entry: entry, history: model.history) { model.lookUp($0) }
-                    } else {
-                        ContentUnavailableView("This part was deleted", systemImage: "text.viewfinder")
-                    }
+                    ReadingEntryView(
+                        readingID: readingID,
+                        entryID: entryID,
+                        store: store,
+                        history: model.history,
+                        model: model.settings.imageModel,
+                        openSettings: { model.section = .settings },
+                        onLookUp: { model.lookUp($0) }
+                    )
                 }
             }
         }

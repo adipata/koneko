@@ -179,19 +179,81 @@ struct ReadingEntryContent: View {
     }
 }
 
-/// A saved part, opened from a reading's history.
+/// A saved part, opened from a reading's history. "Explain again" asks the AI for a new
+/// explanation (offered prominently when the saved one is missing).
 struct ReadingEntryView: View {
-    let entry: ReadingEntry
+    let readingID: Reading.ID
+    let entryID: ReadingEntry.ID
+    let store: ReadingStore
     let history: HistoryStore
+    let model: AIModel
+    let openSettings: () -> Void
     var onLookUp: ((String) -> Void)?
 
+    @State private var explaining: Task<Void, Never>?
+    @State private var problem: AIProblem?
+
+    private var reading: Reading? { store.reading(readingID) }
+    private var entry: ReadingEntry? { reading?.entries.first { $0.id == entryID } }
+
     var body: some View {
-        ScrollView {
-            ReadingEntryContent(entry: entry, history: history, onLookUp: onLookUp)
+        if let entry {
+            ScrollView {
+                VStack(spacing: 20) {
+                    ReadingEntryContent(entry: entry, history: history, onLookUp: onLookUp)
+                    if entry.explanation.isEmpty || explaining != nil || problem != nil {
+                        explainAgainBox(missing: entry.explanation.isEmpty)
+                    }
+                }
                 .padding()
+            }
+            .navigationTitle(entry.date.formatted(date: .abbreviated, time: .shortened))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Explain again", systemImage: "arrow.clockwise", action: explainAgain)
+                        .disabled(explaining != nil)
+                }
+            }
+            .onDisappear { explaining?.cancel() }
+        } else {
+            ContentUnavailableView("This part was deleted", systemImage: "text.viewfinder")
         }
-        .navigationTitle(entry.date.formatted(date: .abbreviated, time: .shortened))
-        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private func explainAgainBox(missing: Bool) -> some View {
+        VStack(spacing: 10) {
+            if explaining != nil {
+                ProgressView("Explaining…")
+            } else if let problem {
+                AIProblemView(problem: problem, retry: explainAgain, openSettings: openSettings)
+            } else if missing {
+                Text("The explanation for this part is missing.")
+                    .foregroundStyle(.secondary)
+                Button("Explain again", systemImage: "sparkles", action: explainAgain)
+                    .buttonStyle(.borderedProminent)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.orange.opacity(0.08)))
+    }
+
+    private func explainAgain() {
+        guard explaining == nil, let reading, let entry else { return }
+        problem = nil
+        explaining = Task {
+            defer { explaining = nil }
+            do {
+                let explanation = try await ReadingExplainer.explainAgain(entry, in: reading, model: model)
+                store.setExplanation(explanation, of: entryID, in: readingID)
+            } catch is CancellationError {
+                return
+            } catch {
+                problem = AIProblem(error, provider: model.provider)
+            }
+        }
     }
 }
 #endif
