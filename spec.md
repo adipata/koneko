@@ -61,7 +61,7 @@ Her main device is an iPad with an Apple Pencil.
   (`Reading`: title, 📖 book or 🗯️ manga, entries oldest first), saved in
   `Application Support/readings.json` by `ReadingStore`. Create, rename and delete readings;
   delete single entries.
-  - In a reading: 📷 Photo / Choose / Paste (system `PasteButton`, no paste prompt) opens
+  - In a reading: 📷 Photo / Choose / Paste (system `UIPasteControl` via `PasteImageControl`, no paste prompt, sized like the other round buttons) opens
     `ReadingScanView`, with a segmented switch: ✂️ Crop the picture (`PhotoCropView`, the crop
     is sent as JPEG, default for manga) or 🔤 Select the text (`LiveTextImage`, only the
     selected text is sent, default for books).

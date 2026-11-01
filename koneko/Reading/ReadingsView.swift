@@ -293,32 +293,42 @@ struct ReadingDetailView: View {
         }
     }
 
-    /// Round icon buttons with a small caption below, like the share sheet. The system Paste
-    /// button (no "Allow Paste" question) can't stack its own label, so every caption is a
-    /// separate text under an icon-only button.
+    /// Round icon buttons with a small caption below, like the share sheet, all the same size.
     private var scanButtons: some View {
         HStack(alignment: .top, spacing: 12) {
             if CameraPicker.isAvailable {
                 scanTile("Photo") {
-                    Button("Take a photo", systemImage: "camera.fill") { showsCamera = true }
+                    roundButton("Take a photo", systemImage: "camera.fill") { showsCamera = true }
                 }
             }
             scanTile("Choose") {
-                Button("Choose a photo", systemImage: "photo.on.rectangle") { showsLibrary = true }
+                roundButton("Choose a photo", systemImage: "photo.on.rectangle") { showsLibrary = true }
             }
             scanTile("Paste") {
-                PasteButton(supportedContentTypes: [.image]) { providers in
-                    paste(providers)
-                }
+                // The system paste control: no "Allow Paste" question.
+                PasteImageControl { paste($0) }
+                    .frame(width: Self.scanButtonSize, height: Self.scanButtonSize)
+                    .accessibilityLabel("Paste a picture")
             }
         }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.circle)
-        .controlSize(.extraLarge)
-        .tint(.orange)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
+    }
+
+    private static let scanButtonSize: CGFloat = 64
+
+    private func roundButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(width: Self.scanButtonSize, height: Self.scanButtonSize)
+                .background(Circle().fill(Color.orange))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .help(title)
     }
 
     private func scanTile(_ caption: String, @ViewBuilder button: () -> some View) -> some View {
