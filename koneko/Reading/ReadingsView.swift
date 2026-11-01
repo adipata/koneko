@@ -293,29 +293,46 @@ struct ReadingDetailView: View {
         }
     }
 
+    /// Round icon buttons with a small caption below, like the share sheet. The system Paste
+    /// button (no "Allow Paste" question) can't stack its own label, so every caption is a
+    /// separate text under an icon-only button.
     private var scanButtons: some View {
-        HStack(spacing: 10) {
+        HStack(alignment: .top, spacing: 12) {
             if CameraPicker.isAvailable {
-                scanButton("Photo", systemImage: "camera") { showsCamera = true }
+                scanTile("Photo") {
+                    Button("Take a photo", systemImage: "camera.fill") { showsCamera = true }
+                }
             }
-            scanButton("Choose", systemImage: "photo.on.rectangle") { showsLibrary = true }
-            // The system Paste button: no "Allow Paste" question.
-            PasteButton(supportedContentTypes: [.image]) { providers in
-                paste(providers)
+            scanTile("Choose") {
+                Button("Choose a photo", systemImage: "photo.on.rectangle") { showsLibrary = true }
             }
-            .labelStyle(.titleAndIcon)
-            .buttonBorderShape(.roundedRectangle)
+            scanTile("Paste") {
+                PasteButton(supportedContentTypes: [.image]) { providers in
+                    paste(providers)
+                }
+            }
         }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.circle)
+        .controlSize(.extraLarge)
+        .tint(.orange)
         .frame(maxWidth: .infinity)
-        .buttonStyle(.bordered)
-        .controlSize(.large)
+        .padding(.vertical, 6)
     }
 
-    private func scanButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .frame(maxWidth: .infinity)
+    private func scanTile(_ caption: String, @ViewBuilder button: () -> some View) -> some View {
+        VStack(spacing: 6) {
+            button()
+            Text(caption)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                // VoiceOver already reads the button's own title.
+                .accessibilityHidden(true)
         }
+        .frame(maxWidth: 96)
+        .frame(maxWidth: .infinity)
     }
 
     private func lookUp(_ text: String) {
