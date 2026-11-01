@@ -98,8 +98,13 @@ struct ReadingEntryContent: View {
                 }
             }
             Spacer(minLength: 0)
-            if let word {
-                saveButton(word)
+            HStack(spacing: 14) {
+                if let spoken = Self.spokenText(japanese, reading: reading) {
+                    listenButton(spoken, label: japanese)
+                }
+                if let word {
+                    saveButton(word)
+                }
             }
         }
         .contextMenu {
@@ -111,6 +116,26 @@ struct ReadingEntryContent: View {
                 Button("Look up in Write", systemImage: "pencil.and.scribble") { onLookUp(japanese) }
             }
         }
+    }
+
+    private func listenButton(_ spoken: String, label: String) -> some View {
+        Button {
+            Pronouncer.shared.speak(spoken)
+        } label: {
+            Image(systemName: "speaker.wave.2.fill")
+                .font(.title3)
+        }
+        .buttonStyle(.borderless)
+        .tint(.orange)
+        .accessibilityLabel("Listen to \(label)")
+        .help("Listen")
+    }
+
+    /// What to say for a word or kanji: its kana reading, so kanji are never misread.
+    private static func spokenText(_ japanese: String, reading: String) -> String? {
+        let reading = reading.trimmingCharacters(in: .whitespacesAndNewlines)
+        if JapaneseText.isKana(reading) { return reading }
+        return JapaneseText.isKana(japanese) ? japanese : nil
     }
 
     private func saveButton(_ word: WordCandidate) -> some View {
