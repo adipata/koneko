@@ -30,7 +30,15 @@ each character being written stroke by stroke.
   grade with search; each character shows its sound, stroke order and practice, with a Copy button; kanji get an
   AI explanation with example words (cached). Offline kanji data: `Shared/Resources/kanji_info.json`
   (`python3 Tools/build_kanji_info.py`).
-- **Navigation:** Write · My words · Learn · Settings as a tab bar on iPhone and a sidebar on
+- **Reading (iPhone/iPad):** a directory of readings (one per book or manga; create, rename,
+  delete). In a reading she takes a photo, chooses one (e.g. a screenshot) or pastes a picture,
+  then either 🔤 selects the text (Live Text, only the text is sent) or ✂️ crops a part (e.g.
+  one manga panel; the picture is sent). The AI returns the text (selectable, to copy parts of
+  it) and an explanation: English meaning, the text in kana, how the sentence is built, the
+  words and the kanji. Each part is kept in the reading's history; the earlier texts (and, for
+  manga panels, a hidden one-line scene description) are sent as context, the explanations are
+  not. Selected words can be looked up in Write from the text's edit menu.
+- **Navigation:** Write · My words · Learn · Reading · Settings as a tab bar on iPhone and a sidebar on
   iPad/Mac (`TabView` with `.sidebarAdaptable`).
 - **Watch kana:** Learn → Hiragana/Katakana on the watch: pick a sound from the list, then a
   full-screen character drawn from its strokes (tap to replay the stroke order); Digital Crown

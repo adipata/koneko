@@ -46,6 +46,7 @@ struct AboutView: View {
                     feature("character.book.closed", "See it in kanji, hiragana or katakana, with furigana")
                     feature("pencil.tip", "Watch the stroke order, then practise with Apple Pencil")
                     feature("speaker.wave.2.fill", "Hear how it sounds")
+                    feature("book.pages", "Read books and manga with explanations of each sentence")
                     feature("book", "Keep your words in folders, on iPad, Mac and Apple Watch")
                 }
                 .padding()
@@ -55,7 +56,7 @@ struct AboutView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Label("Privacy", systemImage: "hand.raised.fill")
                         .font(.headline)
-                    Text("Speech is recognised on the device whenever possible. Printed words in photos are read on the device. Only the words you look up, and the part of a photo you crop to read or check handwriting, are sent to the AI service you choose in Settings (OpenRouter, or Anthropic's Claude API). Your word list stays on your devices and in your own iCloud.")
+                    Text("Speech is recognised on the device whenever possible. Printed words in photos are read on the device. Only the words you look up, and the part of a photo you crop to read or check handwriting, are sent to the AI service you choose in Settings (OpenRouter, or Anthropic's Claude API). In Reading, the text you select or the part of a page you crop is sent, with the text of the parts read before in the same reading. Your word list stays on your devices and in your own iCloud; your readings stay on this device.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
