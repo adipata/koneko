@@ -10,6 +10,7 @@ struct ReadingScanView: View {
     let image: UIImage
     let readingID: Reading.ID
     let store: ReadingStore
+    let history: HistoryStore
     let model: AIModel
     let openSettings: () -> Void
     var onLookUp: ((String) -> Void)?
@@ -32,10 +33,11 @@ struct ReadingScanView: View {
     /// The part just explained, shown instead of the photo.
     @State private var result: ReadingEntry?
 
-    init(image: UIImage, reading: Reading, store: ReadingStore, model: AIModel, openSettings: @escaping () -> Void, onLookUp: ((String) -> Void)? = nil) {
+    init(image: UIImage, reading: Reading, store: ReadingStore, history: HistoryStore, model: AIModel, openSettings: @escaping () -> Void, onLookUp: ((String) -> Void)? = nil) {
         self.image = image
         readingID = reading.id
         self.store = store
+        self.history = history
         self.model = model
         self.openSettings = openSettings
         self.onLookUp = onLookUp
@@ -238,7 +240,7 @@ struct ReadingScanView: View {
     private func resultView(_ entry: ReadingEntry) -> some View {
         ScrollView {
             VStack(spacing: 20) {
-                ReadingEntryContent(entry: entry, onLookUp: onLookUp == nil ? nil : lookUpAndClose)
+                ReadingEntryContent(entry: entry, history: history, onLookUp: onLookUp == nil ? nil : lookUpAndClose)
                 Button("Explain another part of this photo", systemImage: "viewfinder") {
                     selectedText = ""
                     result = nil

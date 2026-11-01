@@ -72,7 +72,11 @@ Her main device is an iPad with an Apple Pencil.
     **never** sent back as context.
   - `ReadingEntryContent` shows it; the texts use `SelectableText` (a non-editable
     `UITextView`) because SwiftUI's `.textSelection` can't select part of a text on iOS. Its
-    edit menu adds "Look up in Write" (`AppModel.lookUp`).
+    edit menu adds "Look up in Write" (`AppModel.lookUp`). Each row of Words and Kanji has a
+    ⊕ Save to My words button (`HistoryStore.record` with a `WordCandidate` built from the row,
+    no emoji; ✓ once saved).
+  - The prompt treats her as an adult learner (standard grammar terms, concise) and lists every
+    kanji, even common ones.
 - **Settings**:
   - AI service (OpenRouter or Claude), its API key (Keychain, one per service) and model
   - writing style: as adults write / kanji up to grade N / all hiragana / all katakana

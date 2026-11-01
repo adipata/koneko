@@ -5,6 +5,8 @@ import SwiftUI
 /// explanation saved with it.
 struct ReadingEntryContent: View {
     let entry: ReadingEntry
+    /// My words, to save words and kanji from the explanation.
+    let history: HistoryStore
     var onLookUp: ((String) -> Void)?
 
     var body: some View {
@@ -77,7 +79,8 @@ struct ReadingEntryContent: View {
     }
 
     private func pieceRow(_ japanese: String, reading: String, meaning: String, note: String, large: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
+        let word = Self.word(japanese, reading: reading, meaning: meaning)
+        return HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text(japanese)
                 .font(large ? .largeTitle : .title3.weight(.medium))
                 .frame(minWidth: large ? 48 : nil, alignment: .leading)
@@ -94,24 +97,68 @@ struct ReadingEntryContent: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            Spacer(minLength: 0)
+            if let word {
+                saveButton(word)
+            }
         }
         .contextMenu {
+            if let word, !isSaved(word) {
+                Button("Save to My words", systemImage: "plus.circle") { history.record(word) }
+            }
             Button("Copy “\(japanese)”", systemImage: "doc.on.doc") { Clipboard.copy(japanese) }
             if let onLookUp {
                 Button("Look up in Write", systemImage: "pencil.and.scribble") { onLookUp(japanese) }
             }
         }
     }
+
+    private func saveButton(_ word: WordCandidate) -> some View {
+        let saved = isSaved(word)
+        return Button {
+            history.record(word)
+        } label: {
+            Image(systemName: saved ? "checkmark.circle.fill" : "plus.circle")
+                .font(.title3)
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .buttonStyle(.borderless)
+        .tint(saved ? .green : .orange)
+        .disabled(saved)
+        .accessibilityLabel(saved ? "\(word.japanese) is in My words" : "Save \(word.japanese) to My words")
+        .help(saved ? "In My words" : "Save to My words")
+    }
+
+    private func isSaved(_ word: WordCandidate) -> Bool {
+        history.entries.contains { $0.id == word.id }
+    }
+
+    /// A word or kanji of the explanation as a My words entry; nil if it can't be one
+    /// (not Japanese, or no kana reading).
+    private static func word(_ japanese: String, reading: String, meaning: String) -> WordCandidate? {
+        let kana = JapaneseText.isKana(japanese) ? japanese : reading
+        let candidate = WordCandidate(
+            japanese: japanese,
+            reading: kana,
+            romaji: "",
+            meaning: meaning,
+            emoji: "",
+            isLoanword: JapaneseText.isKana(japanese) && JapaneseText.katakana(japanese) == japanese,
+            parts: [WordCandidate.Part(text: japanese, reading: JapaneseText.hiragana(kana))]
+        )
+        return candidate.validated()
+    }
 }
 
 /// A saved part, opened from a reading's history.
 struct ReadingEntryView: View {
     let entry: ReadingEntry
+    let history: HistoryStore
     var onLookUp: ((String) -> Void)?
 
     var body: some View {
         ScrollView {
-            ReadingEntryContent(entry: entry, onLookUp: onLookUp)
+            ReadingEntryContent(entry: entry, history: history, onLookUp: onLookUp)
                 .padding()
         }
         .navigationTitle(entry.date.formatted(date: .abbreviated, time: .shortened))

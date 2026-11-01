@@ -37,7 +37,8 @@ each character being written stroke by stroke.
   it) and an explanation: English meaning, the text in kana, how the sentence is built, the
   words and the kanji. Each part is kept in the reading's history; the earlier texts (and, for
   manga panels, a hidden one-line scene description) are sent as context, the explanations are
-  not. Selected words can be looked up in Write from the text's edit menu.
+  not. Selected words can be looked up in Write from the text's edit menu, and each word or
+  kanji of the explanation can be saved to My words (⊕).
 - **Navigation:** Write · My words · Learn · Reading · Settings as a tab bar on iPhone and a sidebar on
   iPad/Mac (`TabView` with `.sidebarAdaptable`).
 - **Watch kana:** Learn → Hiragana/Katakana on the watch: pick a sound from the list, then a
