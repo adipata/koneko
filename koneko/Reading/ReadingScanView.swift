@@ -238,9 +238,11 @@ struct ReadingScanView: View {
     }
 
     private func resultView(_ entry: ReadingEntry) -> some View {
-        ScrollView {
+        // Only offer look-up when the caller handles it.
+        let lookUp: ((String) -> Void)? = onLookUp == nil ? nil : { text in lookUpAndClose(text) }
+        return ScrollView {
             VStack(spacing: 20) {
-                ReadingEntryContent(entry: entry, history: history, onLookUp: onLookUp == nil ? nil : lookUpAndClose)
+                ReadingEntryContent(entry: entry, history: history, onLookUp: lookUp)
                 Button("Explain another part of this photo", systemImage: "viewfinder") {
                     selectedText = ""
                     result = nil
