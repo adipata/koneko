@@ -24,7 +24,9 @@ final class Translator {
         guard !query.isEmpty else { return }
         currentTask?.cancel()
 
-        if let cached = cache.candidates(for: query, language: language) {
+        let cached = cache.candidates(for: query, language: language)
+        // Words saved before explanations existed are asked again once, to get one.
+        if let cached, cached.allSatisfy({ !$0.explanation.isEmpty }) {
             status = .results(cached)
             return
         }
@@ -33,7 +35,7 @@ final class Translator {
         do {
             client = try aiModel.client()
         } catch {
-            status = .failed(AIProblem(error, provider: aiModel.provider))
+            status = cached.map { Status.results($0) } ?? .failed(AIProblem(error, provider: aiModel.provider))
             return
         }
 
@@ -51,7 +53,8 @@ final class Translator {
                 return
             } catch {
                 guard !Task.isCancelled else { return }
-                status = .failed(AIProblem(error, provider: aiModel.provider))
+                // Offline or failing: the older saved answer is better than nothing.
+                status = cached.map { Status.results($0) } ?? .failed(AIProblem(error, provider: aiModel.provider))
             }
         }
     }

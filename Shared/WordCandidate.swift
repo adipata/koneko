@@ -33,6 +33,8 @@ nonisolated struct WordCandidate: Codable, Hashable, Identifiable, Sendable {
     var emoji: String
     var isLoanword: Bool
     var parts: [Part]
+    /// A longer, child-friendly explanation: what it means, how it's used, example words.
+    var explanation = ""
 
     var id: String { japanese + "|" + reading + "|" + meaning }
 
@@ -53,6 +55,7 @@ nonisolated struct WordCandidate: Codable, Hashable, Identifiable, Sendable {
         word.romaji = romaji.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         word.meaning = meaning.trimmingCharacters(in: .whitespacesAndNewlines)
         word.emoji = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
+        word.explanation = explanation.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !word.japanese.isEmpty,
               JapaneseText.isJapanese(word.japanese),
@@ -119,6 +122,7 @@ extension WordCandidate {
         emoji = try container.decodeIfPresent(String.self, forKey: .emoji) ?? ""
         isLoanword = try container.decodeIfPresent(Bool.self, forKey: .isLoanword) ?? false
         parts = try container.decodeIfPresent([Part].self, forKey: .parts) ?? []
+        explanation = try container.decodeIfPresent(String.self, forKey: .explanation) ?? ""
     }
 }
 
