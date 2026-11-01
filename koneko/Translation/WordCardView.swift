@@ -46,6 +46,16 @@ struct WordCardView: View {
                     .font(.headline)
                     .multilineTextAlignment(.center)
             }
+            if !word.explanation.isEmpty {
+                Text(word.explanation)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 4)
+                    .textSelection(.enabled)
+            }
         }
         .padding()
         .frame(maxWidth: .infinity)
