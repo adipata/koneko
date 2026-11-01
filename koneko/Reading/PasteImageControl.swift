@@ -15,7 +15,8 @@ struct PasteImageControl: UIViewRepresentable {
         target.onPaste = onPaste
         target.pasteConfiguration = UIPasteConfiguration(acceptableTypeIdentifiers: [UTType.image.identifier])
 
-        var configuration = UIPasteControl.Configuration()
+        // A class, so its properties can be set on a constant.
+        let configuration = UIPasteControl.Configuration()
         configuration.displayMode = .iconOnly
         configuration.cornerStyle = .capsule
         configuration.baseBackgroundColor = tint
