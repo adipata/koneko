@@ -80,15 +80,19 @@ struct ReadingEntryContent: View {
 
     private func pieceRow(_ japanese: String, reading: String, meaning: String, note: String, large: Bool) -> some View {
         let word = Self.word(japanese, reading: reading, meaning: meaning)
-        return HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(japanese)
-                .font(large ? .largeTitle : .title3.weight(.medium))
-                .frame(minWidth: large ? 48 : nil, alignment: .leading)
+        // Japanese and its reading on top (the reading wraps below as a whole if needed), then
+        // the English, then the note, so nothing gets interleaved when lines wrap.
+        return HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
+                FlowLayout(spacing: 8, lineSpacing: 2, centered: false) {
+                    Text(japanese)
+                        .font(large ? .largeTitle : .title3.weight(.medium))
                     if !reading.isEmpty, reading != japanese {
-                        Text(reading).foregroundStyle(.secondary)
+                        Text(reading)
+                            .foregroundStyle(.secondary)
                     }
+                }
+                if !meaning.isEmpty {
                     Text(meaning)
                 }
                 if !note.isEmpty {
