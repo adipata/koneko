@@ -114,9 +114,12 @@ enum ReadingExplainer {
     - "text": the Japanese text exactly as written. From a picture: read all the words in reading
       order (manga: speech bubbles right to left, top to bottom; vertical lines top to bottom), one
       bubble or sentence per line. Leave out small furigana printed beside kanji. Include sound
-      effects only if they are clearly part of the text. If you were given the text, return it
-      unchanged, except for stray spaces or line breaks inside a sentence. If there is no Japanese
-      text, return an empty string.
+      effects only if they are clearly part of the text. If you were given the text, it was read
+      from a photo by on-device text recognition, which sometimes mistakes a character for a
+      similar-looking one (e.g. 電聞 for 電話, 稼 for 嫁): return it with such misreadings corrected
+      when the meaning and context make the right character clear, and with stray spaces or line
+      breaks inside a sentence removed; otherwise unchanged. If there is no Japanese text, return
+      an empty string.
     - "scene": only for a manga picture: one or two short sentences about what the panel shows
       (who is there, what they do, their feelings, who is speaking). Otherwise an empty string.
     - "translation": a natural English translation (not word for word).
@@ -128,7 +131,8 @@ enum ReadingExplainer {
       special nuance here (casual speech, sentence-ending particles, onomatopoeia, who is talking to
       whom). Use what she read before to fill in a subject or meaning the text leaves out, and say
       when you do. When you quote Japanese, add its kana reading in brackets if it has kanji. If part
-      of the text is unclear or cut off, say so.
+      of the text is unclear or cut off, say so. If you corrected any misread characters in "text",
+      start with one short sentence naming each change (e.g. "Corrected: 電聞 → 電話 (でんわ).").
     - "words": the words and grammar pieces in order (at most 12; skip repeats): "japanese" as
       written, "reading" in hiragana, "meaning" in short English, "note" with its role in a few words
       (e.g. "topic particle", "past form of 食べる").

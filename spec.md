@@ -70,6 +70,9 @@ Her main device is an iPad with an Apple Pencil.
     panel; stored, never shown), `translation`, `kana`, `explanation` (one paragraph on how it's
     built), `words` and `kanji`. The explanation is stored in the entry for review, and is
     **never** sent back as context.
+  - Selected text comes from Live Text, which misreads similar kanji; the prompt lets the AI
+    correct obvious misreadings in `text` (what is saved) and name each change at the start of
+    the explanation.
   - Answers are decoded tolerantly and repaired (`Answer.repaired()`: leaked JSON inside a text
     field, like `KanjiExplanation.repaired()`). An answer with text but no explanation is asked
     once more, then fails with `.badResponse`; it is never saved empty. A saved part has
