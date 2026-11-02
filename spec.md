@@ -57,6 +57,34 @@ Her main device is an iPad with an Apple Pencil.
   - Flash-card **sets**, made through a Photos-style Select mode; one set can mix hiragana,
     katakana and kanji (`FlashSet.symbols`, each a `FlashSymbol` with its kind). Old
     single-kind sets (`kind` + `items`) still decode.
+- **Reading** (iPhone/iPad only, `Reading/`, tab before Settings): a directory of readings
+  (`Reading`: title, 📖 book or 🗯️ manga, entries oldest first), saved in
+  `Application Support/readings.json` by `ReadingStore`. Create, rename and delete readings;
+  delete single entries.
+  - In a reading: 📷 Photo / Choose / Paste (system `UIPasteControl` via `PasteImageControl`, no paste prompt, sized like the other round buttons) opens
+    `ReadingScanView`, with a segmented switch: ✂️ Crop the picture (`PhotoCropView`, the crop
+    is sent as JPEG, default for manga) or 🔤 Select the text (`LiveTextImage`, only the
+    selected text is sent, default for books).
+  - `ReadingExplainer` sends the part plus the last 15 entries' text (and their hidden `scene`)
+    as context, and gets back `text`, `scene` (manga crops only: one or two sentences about the
+    panel; stored, never shown), `translation`, `kana`, `explanation` (one paragraph on how it's
+    built), `words` and `kanji`. The explanation is stored in the entry for review, and is
+    **never** sent back as context.
+  - Selected text comes from Live Text, which misreads similar kanji; the prompt lets the AI
+    correct obvious misreadings in `text` (what is saved) and name each change at the start of
+    the explanation.
+  - Answers are decoded tolerantly and repaired (`Answer.repaired()`: leaked JSON inside a text
+    field, like `KanjiExplanation.repaired()`). An answer with text but no explanation is asked
+    once more, then fails with `.badResponse`; it is never saved empty. A saved part has
+    "Explain again" (toolbar; a prominent box when the explanation is missing), which re-asks
+    with its text, its scene and the parts before it.
+  - `ReadingEntryContent` shows it; the texts use `SelectableText` (a non-editable
+    `UITextView`) because SwiftUI's `.textSelection` can't select part of a text on iOS. Its
+    edit menu adds "Look up in Write" (`AppModel.lookUp`). Each row of Words and Kanji has a
+    ⊕ Save to My words button (`HistoryStore.record` with a `WordCandidate` built from the row,
+    no emoji; ✓ once saved).
+  - The prompt treats her as an adult learner (standard grammar terms, concise) and lists every
+    kanji, even common ones.
 - **Settings**:
   - AI service (OpenRouter or Claude), its API key (Keychain, one per service) and model
   - writing style: as adults write / kanji up to grade N / all hiragana / all katakana
@@ -141,6 +169,10 @@ koneko/                 app target
                         (reviews.json), SelectionCheckmark, StudySplit
   Settings/             AppSettings (UserDefaults), Keychain (with macOS legacy fallback),
                         SettingsView, AboutView, WatchSyncController
+  Reading/              ReadingStore (models + readings.json), ReadingExplainer (prompt,
+                        context), ReadingsView (directory, ReadingRoute, NewReadingSheet,
+                        ReadingDetailView), ReadingScanView, ReadingEntryView
+                        (+ ReadingEntryContent), SelectableText; UI is iOS only
   Photo/                PhotoTextButton (📷 menu, camera/library), CameraPicker,
                         PhotoTextView (Printed via LiveTextImage / Handwriting via
                         PhotoCropView + HandwritingReader), HandwritingCheckView
@@ -285,7 +317,10 @@ Credit any new data in `CreditsView`.
   link to the service's website), and `AIProblemView` shows it. Add new failure cases there
   rather than showing a raw `localizedDescription`.
 - Only the looked-up words, and the cropped part of a photo for reading or checking handwriting, are sent. The
-  privacy text in `AboutView` says so; keep it true. Printed text in photos never leaves the device.
+  privacy text in `AboutView` says so; keep it true. Printed text in photos never leaves the device, except
+  in Reading, where the text she selects (and the earlier texts of that reading) is sent.
+- `requestJSON(maxTokens:)` raises the answer length for long answers (Reading uses 5000; OpenRouter's
+  default is 2000, Claude's 16000).
 
 ## 8. Working conventions
 

@@ -13,7 +13,8 @@ nonisolated struct OpenRouterClient: AIClient {
         user: String,
         imageJPEG: Data?,
         schemaName: String,
-        schema: [String: Any]
+        schema: [String: Any],
+        maxTokens: Int?
     ) async throws -> Output {
         var request = URLRequest(url: Self.endpoint, timeoutInterval: imageJPEG == nil ? 30 : 60)
         request.httpMethod = "POST"
@@ -41,7 +42,7 @@ nonisolated struct OpenRouterClient: AIClient {
             ],
             // Keep thinking short: a child is waiting for the answer.
             "reasoning": ["effort": "low"],
-            "max_tokens": 2000,
+            "max_tokens": maxTokens ?? 2000,
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 

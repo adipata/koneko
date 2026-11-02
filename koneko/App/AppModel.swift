@@ -5,6 +5,7 @@ enum AppSection: String, Hashable, CaseIterable {
     case write
     case words
     case learn
+    case reading
     case settings
 }
 
@@ -21,6 +22,7 @@ final class AppModel {
     let kanjiExplainer = KanjiExplainer()
     let flashSets = FlashSetStore()
     let reviews = ReviewStore()
+    let readings = ReadingStore()
 
     var section: AppSection = .write
     /// A word chosen in another section (e.g. My words) for the Write section to show.
