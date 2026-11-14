@@ -21,8 +21,10 @@ nonisolated enum TranslationPrompt {
     - For a short phrase, give a natural, simple translation.
     - A single kanji is always valid input, even if it is rarely used alone: return it as the candidate ("japanese" is the kanji itself), with its most common reading (prefer the kun'yomi when the kanji has one, e.g. 巻 → まき), and explain its meaning.
     - Any real Japanese word, kanji or expression is valid input, even if it is unusual or not a word a child would learn first.
+    - Japanese input written only in hiragana or katakana is valid even when adults normally write the word with kanji. Look it up by its sound and return the usual written form, e.g. やまぶどう → 山ぶどう (wild grape), さくら → 桜, ねこ → 猫.
+    - Kana input may be a compound of known words (やま + ぶどう, うみ + がめ). If you don't know it as a single dictionary word, split it into the words it is made of and combine their meanings.
     - If the input looks misspelled or misheard, guess the intended word.
-    - Only return an empty candidates list if the input is meaningless (random letters or noise) or not suitable for a child.
+    - Only return an empty candidates list if the input is meaningless (random letters or noise) or not suitable for a child. Never return an empty list just because a word is written in kana instead of kanji.
     """
 
     static func userMessage(for text: String, language: InputLanguage) -> String {
@@ -35,6 +37,15 @@ nonisolated enum TranslationPrompt {
             Return how it is written. If it sounds like several different words (homophones), give one candidate per word.
             """
         }
+    }
+
+    /// Asked once more when kana-only input came back with no words: kana spellings of words
+    /// usually written with kanji (やまぶどう for 山ぶどう) are easy for a model to give up on.
+    static func kanaRetryMessage(for text: String) -> String {
+        """
+        Japanese input written only in kana: \(text)
+        This is a real Japanese word or phrase spelled by its sound. Adults may usually write it with kanji: find the word that is read "\(JapaneseText.hiragana(text))" and return it in its usual written form, with its meaning. If it is a compound, split it into the words it is made of (for example やまぶどう = やま 山 + ぶどう, wild grape) and combine their meanings. Do not return an empty list.
+        """
     }
 
     static var schema: [String: Any] {

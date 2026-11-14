@@ -276,6 +276,10 @@ Credit any new data in `CreditsView`.
   OpenRouter, Claude Opus 5.5 on Claude). It can be changed in Settings.
 - Prompts live in `TranslationPrompt` and `KanjiExplainer`. Results must be child-appropriate,
   with an emoji, kana readings per part, and romaji.
+- Kana-only Japanese input must find words usually written with kanji (やまぶどう → 山ぶどう).
+  The prompt says so; if the answer is still empty, `AIClient.translate` asks once more with
+  `TranslationPrompt.kanaRetryMessage`. `WordCandidate.validated(fallbackReading:)` rebuilds a
+  non-kana `reading` from the parts, a kana-only word, or the typed kana, instead of dropping it.
 - Models sometimes return valid JSON whose text field swallowed the rest of the answer
   (`... ", "examples": [...]}` inside `explanation`). `KanjiExplanation.repaired()` cuts that
   out and recovers the leaked fields; it runs on every new answer and on the saved cache at launch.

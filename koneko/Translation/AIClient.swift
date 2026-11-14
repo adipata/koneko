@@ -180,15 +180,32 @@ nonisolated extension AIClient {
     }
 
     func translate(_ text: String, language: InputLanguage) async throws -> [WordCandidate] {
+        let candidates = try await translationCandidates(
+            user: TranslationPrompt.userMessage(for: text, language: language), input: text
+        )
+        // Kana-only input (やまぶどう) for a word usually written with kanji (山ぶどう):
+        // ask once more, more firmly, before telling the child nothing was found.
+        if candidates.isEmpty, language == .japanese, JapaneseText.isKana(text) {
+            try Task.checkCancellation()
+            return try await translationCandidates(
+                user: TranslationPrompt.kanaRetryMessage(for: text), input: text
+            )
+        }
+        return candidates
+    }
+
+    private func translationCandidates(user: String, input: String) async throws -> [WordCandidate] {
         let result: TranslationResult = try await requestJSON(
             system: TranslationPrompt.system,
-            user: TranslationPrompt.userMessage(for: text, language: language),
+            user: user,
             schemaName: "japanese_words",
             schema: TranslationPrompt.schema
         )
+        // When the input is kana, it is the reading: use it if the model's reading is unusable.
+        let kanaInput = JapaneseText.isKana(input) ? JapaneseText.hiragana(input) : nil
         var seen = Set<String>()
         return result.candidates
-            .compactMap { $0.validated() }
+            .compactMap { $0.validated(fallbackReading: kanaInput) }
             .filter { seen.insert($0.japanese).inserted }
             .prefix(4)
             .map { $0 }

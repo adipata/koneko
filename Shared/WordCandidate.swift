@@ -48,10 +48,23 @@ nonisolated struct WordCandidate: Codable, Hashable, Identifiable, Sendable {
     }
 
     /// Checks and cleans up a candidate returned by the LLM. Returns nil if it's unusable.
-    func validated() -> WordCandidate? {
+    /// `fallbackReading` (the child's kana input) is used when the model's reading isn't kana.
+    func validated(fallbackReading: String? = nil) -> WordCandidate? {
         var word = self
         word.japanese = japanese.trimmingCharacters(in: .whitespacesAndNewlines)
         word.reading = JapaneseText.hiragana(reading.trimmingCharacters(in: .whitespacesAndNewlines))
+        if !JapaneseText.isKana(word.reading) {
+            // Some models put romaji or kanji in "reading". Rebuild it from the parts, from a
+            // kana-only word itself, or from the kana the child typed.
+            let fromParts = JapaneseText.hiragana(parts.map { $0.reading.trimmingCharacters(in: .whitespaces) }.joined())
+            if JapaneseText.isKana(fromParts) {
+                word.reading = fromParts
+            } else if JapaneseText.isKana(word.japanese) {
+                word.reading = JapaneseText.hiragana(word.japanese)
+            } else if let fallbackReading, JapaneseText.isKana(fallbackReading) {
+                word.reading = fallbackReading
+            }
+        }
         word.romaji = romaji.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         word.meaning = meaning.trimmingCharacters(in: .whitespacesAndNewlines)
         word.emoji = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
