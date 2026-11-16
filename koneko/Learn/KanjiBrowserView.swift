@@ -219,6 +219,7 @@ struct KanjiDetailView: View {
         VStack(alignment: .leading, spacing: 18) {
             header
             readings
+            partsSection
             aiCard
             strokes
         }
@@ -235,7 +236,7 @@ struct KanjiDetailView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     if let emoji { Text(emoji).font(.largeTitle) }
-                    Text(explanation?.meaning ?? info.shortMeaning)
+                    Text(explanation.map(\.meaning).flatMap { $0.isEmpty ? nil : $0 } ?? info.shortMeaning)
                         .font(.title2.weight(.semibold))
                 }
                 if info.meanings.count > 1 {
@@ -282,20 +283,83 @@ struct KanjiDetailView: View {
                 .foregroundStyle(.secondary)
             FlowLayout(spacing: 6, lineSpacing: 6, centered: false) {
                 ForEach(readings, id: \.self) { reading in
-                    let clean = KanjiInfo.clean(reading)
-                    Button {
-                        Pronouncer.shared.speak(clean)
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "speaker.wave.2.fill").font(.caption)
-                            Text(clean).font(.handwriting(size: 18))
-                            Text(JapaneseText.romaji(clean)).font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    .buttonStyle(.bordered)
+                    readingChip(KanjiInfo.clean(reading))
                 }
             }
         }
+    }
+
+    /// A reading to tap and hear: speaker, kana, romaji.
+    private func readingChip(_ reading: String) -> some View {
+        Button {
+            Pronouncer.shared.speak(reading)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "speaker.wave.2.fill").font(.caption)
+                Text(reading).font(.handwriting(size: 18))
+                Text(JapaneseText.romaji(reading)).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .buttonStyle(.bordered)
+    }
+
+    // MARK: Parts
+
+    private var parts: [KanjiPart] { KanjiParts.shared.parts(of: info.character) }
+
+    /// The parts the kanji is built from (禾 grain + 火 fire for 秋), each with its readings.
+    @ViewBuilder
+    private var partsSection: some View {
+        if !parts.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Made of")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(parts) { part in
+                    partRow(part)
+                }
+            }
+        }
+    }
+
+    private func partRow(_ part: KanjiPart) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(part.character)
+                .font(.handwriting(size: 36))
+                .frame(minWidth: 48, minHeight: 48)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.orange.opacity(0.12)))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(part.meaning)
+                        .font(.subheadline.weight(.semibold))
+                    if let source = part.source {
+                        Text("from \(source)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if let name = part.name {
+                    Button {
+                        Pronouncer.shared.speak(name)
+                    } label: {
+                        Label("Called \(name) (\(JapaneseText.romaji(name)))", systemImage: "tag")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                if !part.readings.isEmpty {
+                    FlowLayout(spacing: 6, lineSpacing: 6, centered: false) {
+                        ForEach(part.readings, id: \.self) { reading in
+                            readingChip(reading)
+                        }
+                    }
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(part.character), \(part.meaning)")
     }
 
     @ViewBuilder
@@ -339,6 +403,12 @@ struct KanjiDetailView: View {
             } else if !model.settings.hasAPIKey {
                 Text("Add an AI API key in Settings to get a friendly explanation with example words.")
                     .foregroundStyle(.secondary)
+            } else {
+                // Never leave the card blank: offer to ask (again).
+                Button("Get an explanation", systemImage: "sparkles") {
+                    Task { await explainer.explain(info, model: model.settings.aiModel) }
+                }
+                .buttonStyle(.bordered)
             }
         }
         .padding()

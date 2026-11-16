@@ -44,6 +44,10 @@ Her main device is an iPad with an Apple Pencil.
   - hiragana and katakana charts (basic, ゛゜, combined), with sound, strokes and practice
   - kanji by school grade (1–6, plus 7 = secondary), grouped and searchable, with an AI
     explanation that is cached
+  - each kanji shows "Made of": the parts it is built from (秋 = 禾 grain + 火 fire), each with
+    its meaning, radical name (のぎへん) and tappable reading chips. Offline data
+    (`koneko/Resources/kanji_parts.json`, `KanjiParts`); the parts are also passed to the AI so
+    its memory tip matches the real shape
   - the selected character has a Copy button (`CopyButton`: the icon turns into a ✓ briefly)
   - Flash cards, in two modes (picked at the top of a session, remembered):
     - **🌱 Review** (spaced repetition, FSRS): the cards that are due plus a few new ones
@@ -136,7 +140,7 @@ koneko/                 app target
                         HistoryView (My words UI), SaveWordBar (Pin/folder on Write),
                         WordFlashPickerView (word flash cards from several folders)
   Learn/                LearnView, KanaStudyView, KanjiBrowserView, KanjiExplainer,
-                        KanjiEmoji, FlashCardSessionView (+ GardenRow),
+                        KanjiEmoji, KanjiParts, FlashCardSessionView (+ GardenRow),
                         FlashSetsView, FlashSetStore (+ SymbolSelection), ReviewStore
                         (reviews.json), SelectionCheckmark, StudySplit
   Settings/             AppSettings (UserDefaults), Keychain (with macOS legacy fallback),
@@ -257,6 +261,7 @@ docs/AppleWatch.md      watch setup and run instructions
 | `koneko/Resources/strokes.json`, `Shared/Resources/kana_strokes.json` | KanjiVG | CC BY-SA 3.0 | `python3 Tools/build_strokes.py` |
 | `Shared/Resources/kanji_grades.json` | KANJIDIC2 via kanji-data | CC BY-SA 4.0 | `python3 Tools/build_kanji_grades.py` |
 | `Shared/Resources/kanji_info.json` (meanings, readings, radical) | KANJIDIC2 via kanji-data | CC BY-SA 4.0 | `python3 Tools/build_kanji_info.py` |
+| `koneko/Resources/kanji_parts.json` (parts of each kanji, their meanings/readings) | KanjiVG + KANJIDIC2 (+ hand-written radical names in the script) | CC BY-SA 3.0 / 4.0 | `python3 Tools/build_kanji_parts.py` |
 | Klee One font | Fontworks | SIL OFL 1.1 | — |
 | App icon, mascot | generated | — | `Tools/make_app_icon.py`, `Tools/make_mascot.py` |
 
@@ -279,6 +284,9 @@ Credit any new data in `CreditsView`.
 - Models sometimes return valid JSON whose text field swallowed the rest of the answer
   (`... ", "examples": [...]}` inside `explanation`). `KanjiExplanation.repaired()` cuts that
   out and recovers the leaked fields; it runs on every new answer and on the saved cache at launch.
+- An explanation with no text (`hasContent == false`) is never saved: it shows the "muddled
+  answer" error with Try again, and empty ones already in the cache are dropped at launch. The
+  card is never blank: without an answer, error or loading state it offers "Get an explanation".
 - **Errors:** each client maps HTTP status codes and `URLError`s to `TranslationError`
   (`ClaudeClient` also maps `stop_reason: "refusal"` to `.refused`). `AIProblem(error,
   provider:)` turns each one into a clear title, message and fixes (Try again, Settings, a

@@ -16,6 +16,12 @@ nonisolated struct KanjiExplanation: Codable, Sendable, Equatable {
 }
 
 extension KanjiExplanation {
+    /// The answer has something to show. Some models now and then answer with every text left
+    /// empty; such an answer must not be saved, or the card stays blank for good.
+    nonisolated var hasContent: Bool {
+        !explanation.isEmpty || !memoryTip.isEmpty || !examples.isEmpty
+    }
+
     /// Some models break the JSON: they close a text field too late, so the rest of the answer
     /// (`", "examples": [...]}`) ends up inside that text. This cuts the leaked JSON out of the
     /// texts and recovers the fields it held, so the card shows the word list, not raw JSON.
@@ -57,13 +63,43 @@ extension KanjiExplanation {
         // The leaked part may or may not keep its closing brace; try a few endings.
         let tail = String(plain[keyStart...]).trimmingCharacters(in: .whitespacesAndNewlines)
         let body = tail.trimmingCharacters(in: CharacterSet(charactersIn: "}\" \n\t"))
+        var parsed = false
         for candidate in ["{" + tail, "{" + tail + "}", "{" + body + "}", "{" + body + "\"}", "{" + body + "]}"] {
             if let object = try? JSONSerialization.jsonObject(with: Data(candidate.utf8)) as? [String: Any] {
                 leaked.merge(object) { current, _ in current }
+                parsed = true
                 break
             }
         }
+        // Still not valid JSON: pick the fields out one by one, so the texts aren't lost.
+        if !parsed {
+            leaked.merge(fieldsByPattern(in: tail)) { current, _ in current }
+        }
         return trimmed(String(plain[..<found.lowerBound]))
+    }
+
+    /// Finds `"field": "text"` pairs and the `"examples": [...]` list in broken JSON.
+    private nonisolated static func fieldsByPattern(in text: String) -> [String: Any] {
+        var result: [String: Any] = [:]
+        for field in ["emoji", "meaning", "explanation", "memoryTip"] {
+            let pattern = "\"\(field)\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\""
+            guard let regex = try? NSRegularExpression(pattern: pattern),
+                  let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+                  let range = Range(match.range(at: 1), in: text)
+            else { continue }
+            let value = String(text[range])
+            // Undo JSON escapes (\n, \u3042, …) by decoding the text as a JSON string.
+            let decoded = (try? JSONSerialization.jsonObject(with: Data("[\"\(value)\"]".utf8)) as? [String])?.first
+            result[field] = decoded ?? value
+        }
+        if let start = text.range(of: #""examples"\s*:\s*\["#, options: .regularExpression),
+           let end = text.range(of: "]", options: .backwards), end.lowerBound >= start.upperBound {
+            let list = "[" + String(text[start.upperBound..<end.lowerBound]) + "]"
+            if let items = try? JSONSerialization.jsonObject(with: Data(list.utf8)) as? [[String: Any]] {
+                result["examples"] = items
+            }
+        }
+        return result
     }
 
     /// Drops stray quotes, commas and spaces left around a cut text.
@@ -87,7 +123,8 @@ final class KanjiExplainer {
         if let data = try? Data(contentsOf: fileURL),
            let saved = try? JSONDecoder().decode([String: KanjiExplanation].self, from: data) {
             // Repair answers saved before the leaked-JSON fix, so old broken cards fix themselves.
-            explanations = saved.mapValues { $0.repaired() }
+            // Empty answers saved by earlier versions are dropped, so they are asked for again.
+            explanations = saved.mapValues { $0.repaired() }.filter { $0.value.hasContent }
             if explanations != saved { save() }
         }
     }
@@ -107,7 +144,13 @@ final class KanjiExplainer {
                 schemaName: "kanji_explanation",
                 schema: Self.schema
             )
-            explanations[key] = result.repaired()
+            let repaired = result.repaired()
+            guard repaired.hasContent else {
+                // Show "try again" instead of a blank card, and don't keep the empty answer.
+                errors[key] = AIProblem(TranslationError.badResponse, provider: model.provider)
+                return
+            }
+            explanations[key] = repaired
             save()
         } catch is CancellationError {
             return
@@ -138,6 +181,7 @@ final class KanjiExplainer {
     - "meaning": the main meaning in 1 to 4 English words.
     - "explanation": 1 or 2 short sentences about what it means and when it is used.
     - "memoryTip": one short, fun way to remember the shape (what it looks like), true to the real shape.
+      When the parts it is built from are given, a tip that joins their meanings works well.
     - "examples": 2 or 3 common, child-friendly words that use this kanji. "word" as normally written,
       "reading" in hiragana only, "meaning" in simple English.
     """
@@ -149,7 +193,16 @@ final class KanjiExplainer {
         Japanese readings (kun): \(info.kun.map(KanjiInfo.clean).joined(separator: ", "))
         Chinese readings (on): \(info.on.joined(separator: ", "))
         Strokes: \(info.strokes)
+        \(partsLine(for: info))
         """
+    }
+
+    /// The parts the kanji is built from (from KanjiVG), so the memory tip matches the real shape.
+    private static func partsLine(for info: KanjiInfo) -> String {
+        let parts = KanjiParts.shared.parts(of: info.character)
+        guard !parts.isEmpty else { return "" }
+        let list = parts.map { "\($0.character) (\($0.meaning.lowercased()))" }.joined(separator: " + ")
+        return "Built from: \(list)"
     }
 
     private static var schema: [String: Any] {
