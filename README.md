@@ -28,7 +28,8 @@ each character being written stroke by stroke.
   watchOS app (`KonekoWatch/`, shared code in `Shared/`). Setup: see `docs/AppleWatch.md`.
 - **Learn:** hiragana and katakana charts (basic, ゛゜, combined sounds) and kanji by school
   grade with search; each character shows its sound, stroke order and practice, with a Copy button; kanji get an
-  AI explanation with example words (cached). Offline kanji data: `Shared/Resources/kanji_info.json`
+  AI explanation with example words (cached) and the parts they are made of (e.g. 秋 = 禾 grain + 火 fire)
+  with their meanings and readings (`koneko/Resources/kanji_parts.json`, `python3 Tools/build_kanji_parts.py`). Offline kanji data: `Shared/Resources/kanji_info.json`
   (`python3 Tools/build_kanji_info.py`).
 - **Reading (iPhone/iPad):** a directory of readings (one per book or manga; create, rename,
   delete). In a reading she takes a photo, chooses one (e.g. a screenshot) or pastes a picture,
