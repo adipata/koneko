@@ -14,7 +14,8 @@ nonisolated struct ClaudeClient: AIClient {
         user: String,
         imageJPEG: Data?,
         schemaName: String,
-        schema: [String: Any]
+        schema: [String: Any],
+        maxTokens: Int?
     ) async throws -> Output {
         // Claude thinks before answering, so it gets a little longer than OpenRouter.
         var request = URLRequest(url: Self.endpoint, timeoutInterval: imageJPEG == nil ? 60 : 90)
@@ -33,7 +34,7 @@ nonisolated struct ClaudeClient: AIClient {
         userContent.append(["type": "text", "text": user])
         let body: [String: Any] = [
             "model": model,
-            "max_tokens": 16000,
+            "max_tokens": max(16000, maxTokens ?? 0),
             "system": system,
             "messages": [
                 ["role": "user", "content": userContent],

@@ -160,12 +160,14 @@ nonisolated struct AIModel: Hashable, Sendable {
 nonisolated protocol AIClient: Sendable {
     /// Sends a chat request that must answer with JSON matching `schema`, and decodes it.
     /// `imageJPEG`, when given, is sent with the user message (the model must accept images).
+    /// `maxTokens` raises the answer's length limit for long answers (nil: the client's default).
     func requestJSON<Output: Decodable & Sendable>(
         system: String,
         user: String,
         imageJPEG: Data?,
         schemaName: String,
-        schema: [String: Any]
+        schema: [String: Any],
+        maxTokens: Int?
     ) async throws -> Output
 }
 
@@ -173,10 +175,20 @@ nonisolated extension AIClient {
     func requestJSON<Output: Decodable & Sendable>(
         system: String,
         user: String,
+        imageJPEG: Data?,
         schemaName: String,
         schema: [String: Any]
     ) async throws -> Output {
-        try await requestJSON(system: system, user: user, imageJPEG: nil, schemaName: schemaName, schema: schema)
+        try await requestJSON(system: system, user: user, imageJPEG: imageJPEG, schemaName: schemaName, schema: schema, maxTokens: nil)
+    }
+
+    func requestJSON<Output: Decodable & Sendable>(
+        system: String,
+        user: String,
+        schemaName: String,
+        schema: [String: Any]
+    ) async throws -> Output {
+        try await requestJSON(system: system, user: user, imageJPEG: nil, schemaName: schemaName, schema: schema, maxTokens: nil)
     }
 
     func translate(_ text: String, language: InputLanguage) async throws -> [WordCandidate] {

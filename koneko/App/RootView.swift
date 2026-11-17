@@ -1,7 +1,8 @@
 import Combine
 import SwiftUI
 
-/// Tab bar on iPhone; sidebar on iPad and Mac (`.sidebarAdaptable`).
+/// Tab bar on iPhone; sidebar on iPad and Mac (`.sidebarAdaptable`). Reading needs the camera
+/// and Live Text, so it is on iPhone and iPad only.
 struct RootView: View {
     @State private var model = AppModel()
     @State private var showSplash = true
@@ -45,6 +46,11 @@ struct RootView: View {
             Tab("Learn", systemImage: "character.book.closed", value: AppSection.learn) {
                 LearnView(model: model)
             }
+            #if os(iOS)
+            Tab("Reading", systemImage: "book.pages", value: AppSection.reading) {
+                ReadingsView(model: model)
+            }
+            #endif
             Tab("Settings", systemImage: "gearshape", value: AppSection.settings) {
                 SettingsView(
                     settings: model.settings,
